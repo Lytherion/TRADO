@@ -81,6 +81,10 @@ class TaskManagerApp:
         app = QApplication(sys.argv)
         app.setApplicationName("任务管理器")
 
+        # 保存 app 和 style_path 供热重载使用
+        self.app = app
+        self.style_path = Path(__file__).parent / "ui" / "styles.qss"
+
         # 设置应用图标
         icon_path = Path(__file__).parent / "icon.png"
         if icon_path.exists():
@@ -88,17 +92,15 @@ class TaskManagerApp:
             app.setWindowIcon(QIcon(str(icon_path)))
 
         # 加载样式表
-        style_path = Path(__file__).parent / "ui" / "styles.qss"
-        if style_path.exists():
-            with open(style_path, "r", encoding="utf-8") as f:
-                app.setStyleSheet(f.read())
+        self.load_stylesheet()
 
         # 创建主窗口
         self.main_window = MainWindow(
             self.task_service,
             self.recurring_service,
             self.reminder_service,
-            self.permanent_task_service
+            self.permanent_task_service,
+            self  # 传递 app 实例以支持热重载
         )
 
         # 设置窗口图标
@@ -114,6 +116,13 @@ class TaskManagerApp:
         self.main_window.show()
 
         sys.exit(app.exec())
+
+    def load_stylesheet(self):
+        """加载样式表"""
+        if self.style_path.exists():
+            with open(self.style_path, "r", encoding="utf-8") as f:
+                self.app.setStyleSheet(f.read())
+            print("✅ 样式表已重新加载")
 
 
 if __name__ == "__main__":

@@ -1,16 +1,27 @@
-/* 现代网页风格 - 优雅简洁 */
+/* ========================================
+   现代网页风格 UI 样式表
+   按 F5 可实时重载样式
+======================================== */
 
+/* ========== 全局设置 ========== */
 * {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei UI", "PingFang SC", sans-serif;
     outline: none;
 }
 
+/* 主窗口背景 - 浅色渐变 */
 QMainWindow {
     background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
                                 stop:0 #f5f7fa, stop:1 #e8edf3);
 }
 
-/* ========== 主要按钮 - 渐变现代风格 ========== */
+
+/* ========================================
+   按钮样式
+   应用位置:
+   - 顶部工具栏: "新建任务" "新建循环任务" "新建常驻任务" 按钮
+   - 对话框: "确定" "取消" 等按钮
+======================================== */
 QPushButton {
     background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
                                 stop:0 #667eea, stop:1 #5568d3);
@@ -27,7 +38,6 @@ QPushButton {
 QPushButton:hover {
     background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
                                 stop:0 #7c8ff0, stop:1 #6675db);
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
 }
 
 QPushButton:pressed {
@@ -42,7 +52,14 @@ QPushButton:disabled {
     color: #a0a0a0;
 }
 
-/* ========== 输入框 - 卡片式设计 ========== */
+
+/* ========================================
+   输入框样式
+   应用位置:
+   - 任务对话框: 标题输入框
+   - 任务对话框: 描述文本框
+   - 任务对话框: 日期时间选择器
+======================================== */
 QLineEdit, QTextEdit, QDateTimeEdit, QTimeEdit {
     border: 2px solid #e1e8ed;
     border-radius: 10px;
@@ -55,14 +72,20 @@ QLineEdit, QTextEdit, QDateTimeEdit, QTimeEdit {
 
 QLineEdit:focus, QTextEdit:focus, QDateTimeEdit:focus, QTimeEdit:focus {
     border-color: #667eea;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    background-color: #f7faff;
 }
 
 QLineEdit:hover, QTextEdit:hover, QDateTimeEdit:hover, QTimeEdit:hover {
     border-color: #cbd5e0;
 }
 
-/* ========== 下拉框 - 现代化 ========== */
+
+/* ========================================
+   下拉框样式
+   应用位置:
+   - 循环任务对话框: 循环类型选择(每天/每周/每月)
+   - 循环任务对话框: 星期选择
+======================================== */
 QComboBox {
     border: 2px solid #e1e8ed;
     border-radius: 10px;
@@ -80,14 +103,16 @@ QComboBox:hover {
 
 QComboBox:focus {
     border-color: #667eea;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    background-color: #f7faff;
 }
 
+/* 下拉箭头区域 */
 QComboBox::drop-down {
     border: none;
     width: 30px;
 }
 
+/* 下拉箭头样式 - 紫色三角形 */
 QComboBox::down-arrow {
     image: none;
     border-left: 5px solid transparent;
@@ -96,6 +121,7 @@ QComboBox::down-arrow {
     margin-right: 10px;
 }
 
+/* 下拉列表 */
 QComboBox QAbstractItemView {
     border: 2px solid #e1e8ed;
     border-radius: 8px;
@@ -106,6 +132,7 @@ QComboBox QAbstractItemView {
     outline: none;
 }
 
+/* 下拉列表项 */
 QComboBox QAbstractItemView::item {
     padding: 8px 12px;
     border-radius: 6px;
@@ -120,7 +147,12 @@ QComboBox QAbstractItemView::item:selected {
     background-color: #667eea;
 }
 
-/* ========== 复选框 - 现代圆角 ========== */
+
+/* ========================================
+   复选框样式
+   应用位置:
+   - 任务对话框: 各种开关选项
+======================================== */
 QCheckBox {
     spacing: 8px;
     font-size: 14px;
@@ -150,14 +182,25 @@ QCheckBox::indicator:checked:after {
     color: white;
 }
 
-/* ========== 标签 ========== */
+
+/* ========================================
+   标签文本
+   应用位置: 所有文本标签
+======================================== */
 QLabel {
     color: #2d3748;
     font-size: 14px;
     background: transparent;
 }
 
-/* ========== 树形控件 - 卡片风格 ========== */
+
+/* ========================================
+   树形列表控件 - 核心任务列表
+   应用位置:
+   - 右侧主区域: 普通任务列表 (包含未完成/已完成分组)
+   - 左侧区域: 常驻任务列表
+   - 循环任务视图: 循环任务列表
+======================================== */
 QTreeWidget {
     background-color: white;
     border: none;
@@ -170,25 +213,30 @@ QTreeWidget {
     outline: none;
 }
 
+/* 任务行样式 - 每一行任务 */
 QTreeWidget::item {
-    padding: 12px 8px;
-    border-radius: 8px;
-    margin: 2px 0;
+    padding: 12px 8px;      /* 内边距: 影响行高 */
+    border-radius: 8px;     /* 圆角 */
+    margin: 2px 0;          /* 行间距 */
 }
 
+/* 任务行悬停效果 - 鼠标移到任务上 */
 QTreeWidget::item:hover {
-    background-color: #f7fafc;
+    background-color: #f7fafc;  /* 浅灰色背景 */
 }
 
+/* 任务行选中效果 - 点击任务后 */
 QTreeWidget::item:selected {
-    background-color: #e6f0ff;
-    border-left: 4px solid #667eea;
+    background-color: #e6f0ff;      /* 浅蓝色背景 */
+    border-left: 4px solid #667eea; /* 左侧紫色边框强调 */
 }
 
+/* 分组节点的展开/折叠图标 */
 QTreeWidget::branch {
     background: transparent;
 }
 
+/* 任务列表表头 - "任务" "时间" "状态" */
 QHeaderView::section {
     background-color: #f7fafc;
     color: #4a5568;
@@ -201,7 +249,12 @@ QHeaderView::section {
     letter-spacing: 0.5px;
 }
 
-/* ========== 滚动条 - 现代化细条 ========== */
+
+/* ========================================
+   滚动条样式 - 现代化细条
+   应用位置: 所有可滚动区域(任务列表等)
+======================================== */
+/* 垂直滚动条 */
 QScrollBar:vertical {
     background-color: transparent;
     width: 10px;
@@ -227,6 +280,7 @@ QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
     background: none;
 }
 
+/* 水平滚动条 */
 QScrollBar:horizontal {
     background-color: transparent;
     height: 10px;
@@ -248,7 +302,13 @@ QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
     background: none;
 }
 
-/* ========== 分割器 ========== */
+
+/* ========================================
+   分割器 - 调整左右区域大小
+   应用位置:
+   - 左侧常驻任务和右侧任务列表之间的分隔线
+   - 左侧边栏和主视图之间的分隔线
+======================================== */
 QSplitter::handle {
     background-color: #e1e8ed;
 }
@@ -257,19 +317,34 @@ QSplitter::handle:hover {
     background-color: #cbd5e0;
 }
 
-/* ========== 对话框 ========== */
+
+/* ========================================
+   对话框 - 所有弹窗
+   应用位置:
+   - 新建/编辑任务对话框
+   - 新建/编辑循环任务对话框
+   - 新建/编辑常驻任务对话框
+   - 提醒弹窗
+   - 确认删除对话框
+======================================== */
 QDialog {
     background-color: white;
     border-radius: 16px;
 }
 
-/* ========== 菜单 - 卡片风格 ========== */
+
+/* ========================================
+   右键菜单样式
+   应用位置:
+   - 右键任务: 标记完成/编辑/删除
+   - 右键循环任务: 编辑/删除
+   - 右键常驻任务: 编辑/删除
+======================================== */
 QMenu {
     background-color: white;
-    border: 1px solid #e1e8ed;
+    border: 2px solid #e1e8ed;
     border-radius: 12px;
     padding: 8px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
 }
 
 QMenu::item {
@@ -290,7 +365,11 @@ QMenu::separator {
     margin: 6px 12px;
 }
 
-/* ========== 工具栏 ========== */
+
+/* ========================================
+   工具栏 - 顶部按钮区域
+   应用位置: 顶部 "新建任务" 等按钮的容器
+======================================== */
 QToolBar {
     background: white;
     border: none;
@@ -304,7 +383,11 @@ QToolBar QPushButton {
     margin: 0 4px;
 }
 
-/* ========== 状态栏 ========== */
+
+/* ========================================
+   状态栏 - 底部提示信息
+   应用位置: 窗口底部显示操作结果("任务已创建"等)
+======================================== */
 QStatusBar {
     background-color: white;
     border-top: 1px solid #e1e8ed;
@@ -312,7 +395,12 @@ QStatusBar {
     font-size: 13px;
 }
 
-/* ========== 侧边栏按钮 ========== */
+
+/* ========================================
+   侧边栏按钮 - 筛选视图切换
+   应用位置:
+   - 左侧边栏: "所有任务" "今日任务" "循环任务" 按钮
+======================================== */
 QPushButton#sidebarButton {
     background: transparent;
     color: #4a5568;
@@ -330,6 +418,7 @@ QPushButton#sidebarButton:hover {
     color: #667eea;
 }
 
+/* 侧边栏按钮激活状态 - 当前选中的视图 */
 QPushButton#sidebarButton:checked {
     background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
                                 stop:0 rgba(102, 126, 234, 0.1),
@@ -339,7 +428,11 @@ QPushButton#sidebarButton:checked {
     font-weight: 600;
 }
 
-/* ========== 日期时间选择器日历 ========== */
+
+/* ========================================
+   日历控件 - 日期时间选择器弹出的日历
+   应用位置: 点击日期时间输入框弹出的日历面板
+======================================== */
 QCalendarWidget {
     background-color: white;
     border-radius: 12px;
@@ -373,7 +466,11 @@ QCalendarWidget QAbstractItemView {
     selection-color: white;
 }
 
-/* ========== 组框 ========== */
+
+/* ========================================
+   组框 - 分组容器
+   应用位置: 对话框中的分组区域
+======================================== */
 QGroupBox {
     border: 2px solid #e1e8ed;
     border-radius: 12px;
@@ -391,7 +488,11 @@ QGroupBox::title {
     background-color: white;
 }
 
-/* ========== 进度条 ========== */
+
+/* ========================================
+   进度条
+   应用位置: (当前未使用,预留样式)
+======================================== */
 QProgressBar {
     border: none;
     border-radius: 8px;
@@ -408,7 +509,11 @@ QProgressBar::chunk {
     border-radius: 8px;
 }
 
-/* ========== 标签页 ========== */
+
+/* ========================================
+   标签页控件
+   应用位置: (当前未使用,预留样式)
+======================================== */
 QTabWidget::pane {
     border: none;
     background-color: white;
@@ -437,7 +542,11 @@ QTabBar::tab:selected {
     font-weight: 600;
 }
 
-/* ========== 提示框 ========== */
+
+/* ========================================
+   提示框 - 鼠标悬停提示
+   应用位置: 鼠标悬停在控件上显示的提示文本
+======================================== */
 QToolTip {
     background-color: #2d3748;
     color: white;

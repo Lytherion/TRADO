@@ -7,7 +7,7 @@ from PySide6.QtWidgets import (
     QSplitter, QMenu
 )
 from PySide6.QtCore import Qt, QTimer
-from PySide6.QtGui import QAction
+from PySide6.QtGui import QAction, QKeySequence, QShortcut
 from datetime import datetime
 from models import TaskStatus
 from services.task_service import TaskService
@@ -21,18 +21,21 @@ class MainWindow(QMainWindow):
 
     def __init__(self, task_service: TaskService, recurring_service: RecurringTaskService,
                  reminder_service: ReminderService,
-                 permanent_task_service: PermanentTaskService):
+                 permanent_task_service: PermanentTaskService,
+                 app_instance=None):
         super().__init__()
         self.task_service = task_service
         self.recurring_service = recurring_service
         self.reminder_service = reminder_service
         self.permanent_task_service = permanent_task_service
+        self.app_instance = app_instance  # 保存 app 实例用于热重载
 
         self.current_filter = "all"  # 当前筛选条件
 
         self.init_ui()
         self.setup_timer()
         self.load_tasks()
+        self.setup_shortcuts()  # 设置快捷键
 
     def init_ui(self):
         """初始化界面"""
@@ -88,9 +91,13 @@ class MainWindow(QMainWindow):
         layout = QVBoxLayout(sidebar)
 
         # 分类标题
+        # 样式: styles.qss -> QLabel (深色文字、透明背景)
         layout.addWidget(QLabel("<b>筛选</b>"))
 
         # 分类按钮
+        # 注意:这些按钮需要设置 objectName="sidebarButton" 才能应用特殊样式
+        # 样式: styles.qss -> QPushButton#sidebarButton (透明背景、左对齐)
+        # 选中时: QPushButton#sidebarButton:checked (浅蓝背景、左侧紫色边框)
         categories = [
             ("all", "📋 所有任务"),
             ("today", "⭐ 今日任务"),
@@ -110,7 +117,10 @@ class MainWindow(QMainWindow):
         main_view = QWidget()
         layout = QVBoxLayout(main_view)
 
-        # 工具栏
+        # 工具栏按钮
+        # 样式: styles.qss -> QPushButton (紫色渐变、白色文字、圆角)
+        # 悬停时: QPushButton:hover (颜色变亮)
+        # 按下时: QPushButton:pressed (颜色变深、视觉下沉)
         toolbar = QHBoxLayout()
         self.add_task_btn = QPushButton("➕ 新建任务")
         self.add_task_btn.clicked.connect(self.on_add_task)
@@ -141,16 +151,22 @@ class MainWindow(QMainWindow):
         left_layout = QVBoxLayout(left_widget)
         left_layout.setContentsMargins(10, 10, 10, 10)
 
+        # 常驻任务区域标题
         permanent_label = QLabel("📌 常驻任务")
         permanent_label.setStyleSheet("font-weight: bold; font-size: 16px; padding: 5px; background: transparent; border: none;")
         left_layout.addWidget(permanent_label)
 
+        # 常驻任务列表(树形控件)
+        # 样式: styles.qss -> QTreeWidget (白色背景、圆角、无边框)
+        # 任务行: QTreeWidget::item (内边距12px 8px、圆角8px、行间距2px)
+        # 悬停: QTreeWidget::item:hover (浅灰色背景)
+        # 选中: QTreeWidget::item:selected (浅蓝色背景、左侧紫色边框)
         self.permanent_tree = QTreeWidget()
         self.permanent_tree.setHeaderHidden(True)
         self.permanent_tree.setRootIsDecorated(False)
         self.permanent_tree.setStyleSheet("background: white; border: 1px solid #e0e0e0; border-radius: 4px;")
         self.permanent_tree.setContextMenuPolicy(Qt.CustomContextMenu)
-        self.permanent_tree.customContextMenuRequested.connect(self.show_context_menu)
+        self.permanent_tree.customContextMenuRequested.connect(self.show_permanent_context_menu)
         self.permanent_tree.itemDoubleClicked.connect(self.on_item_double_clicked)
         left_layout.addWidget(self.permanent_tree)
 
@@ -168,12 +184,19 @@ class MainWindow(QMainWindow):
         right_layout = QVBoxLayout(right_widget)
         right_layout.setContentsMargins(10, 10, 10, 10)
 
+        # 普通任务列表(树形控件) - 核心UI
+        # 样式: styles.qss -> QTreeWidget (白色背景、圆角、无边框)
+        # 表头: QHeaderView::section (浅灰背景、大写字母、底部边框)
+        # 任务行: QTreeWidget::item (内边距12px 8px、圆角8px、行间距2px)
+        # 悬停: QTreeWidget::item:hover (浅灰色背景 #f7fafc)
+        # 选中: QTreeWidget::item:selected (浅蓝色背景 #e6f0ff、左侧紫色边框4px)
+        # 滚动条: QScrollBar:vertical (10px宽、透明背景、灰色滑块)
         self.task_tree = QTreeWidget()
         self.task_tree.setHeaderLabels(["任务", "时间", "状态"])
-        self.task_tree.setColumnWidth(0, 600)
-        self.task_tree.setColumnWidth(1, 200)
-        self.task_tree.setColumnWidth(2, 120)
-        self.task_tree.setRootIsDecorated(True)
+        self.task_tree.setColumnWidth(0, 600)  # 任务标题列宽
+        self.task_tree.setColumnWidth(1, 200)  # 时间列宽
+        self.task_tree.setColumnWidth(2, 120)  # 状态列宽
+        self.task_tree.setRootIsDecorated(True)  # 显示展开/折叠箭头
         self.task_tree.setStyleSheet("background: white; border: 1px solid #e0e0e0; border-radius: 4px;")
         self.task_tree.setContextMenuPolicy(Qt.CustomContextMenu)
         self.task_tree.customContextMenuRequested.connect(self.show_context_menu)
@@ -324,7 +347,7 @@ class MainWindow(QMainWindow):
         return {0: "未完成", 1: "已完成"}.get(status.value, "未完成")
 
     def show_context_menu(self, pos):
-        """显示右键菜单"""
+        """显示任务列表右键菜单"""
         item = self.task_tree.itemAt(pos)
         if not item:
             return
@@ -333,6 +356,10 @@ class MainWindow(QMainWindow):
         if not data:
             return
 
+        # 右键菜单
+        # 样式: styles.qss -> QMenu (白色背景、圆角12px、边框)
+        # 菜单项: QMenu::item (内边距10px 24px、圆角8px)
+        # 选中项: QMenu::item:selected (浅灰背景、紫色文字)
         menu = QMenu(self)
 
         if data[0] == "task":
@@ -348,16 +375,38 @@ class MainWindow(QMainWindow):
             delete_action.triggered.connect(lambda: self.delete_task(data[1]))
             menu.addAction(delete_action)
 
-        elif data[0] == "permanent":
+        elif data[0] == "recurring":
             edit_action = QAction("✏️ 编辑", self)
-            edit_action.triggered.connect(lambda: self.edit_permanent_task(data[1]))
+            edit_action.triggered.connect(lambda: self.edit_recurring_task(data[1]))
             menu.addAction(edit_action)
 
             delete_action = QAction("🗑️ 删除", self)
-            delete_action.triggered.connect(lambda: self.delete_permanent_task(data[1]))
+            delete_action.triggered.connect(lambda: self.delete_recurring_task(data[1]))
             menu.addAction(delete_action)
 
         menu.exec(self.task_tree.viewport().mapToGlobal(pos))
+
+    def show_permanent_context_menu(self, pos):
+        """显示常驻任务右键菜单"""
+        item = self.permanent_tree.itemAt(pos)
+        if not item:
+            return
+
+        data = item.data(0, Qt.UserRole)
+        if not data:
+            return
+
+        menu = QMenu(self)
+
+        edit_action = QAction("✏️ 编辑", self)
+        edit_action.triggered.connect(lambda: self.edit_permanent_task(data[1]))
+        menu.addAction(edit_action)
+
+        delete_action = QAction("🗑️ 删除", self)
+        delete_action.triggered.connect(lambda: self.delete_permanent_task(data[1]))
+        menu.addAction(delete_action)
+
+        menu.exec(self.permanent_tree.viewport().mapToGlobal(pos))
 
     def on_item_double_clicked(self, item, column):
         """双击任务项"""
@@ -461,6 +510,16 @@ class MainWindow(QMainWindow):
                 self.load_tasks()
                 self.statusBar().showMessage("循环任务已更新")
 
+    def delete_recurring_task(self, recurring_id: int):
+        """删除循环任务"""
+        from PySide6.QtWidgets import QMessageBox
+        reply = QMessageBox.question(self, "确认删除", "确定要删除此循环任务吗？\n关联的任务实例也会被删除。",
+                                      QMessageBox.Yes | QMessageBox.No)
+        if reply == QMessageBox.Yes:
+            self.recurring_service.delete_recurring_task(recurring_id)
+            self.load_tasks()
+            self.statusBar().showMessage("循环任务已删除")
+
     def setup_timer(self):
         """设置定时器"""
         # 重置过期任务的提醒标志
@@ -520,3 +579,15 @@ class MainWindow(QMainWindow):
             import base64
             return base64.b64decode(state_str)
         return None
+
+    def setup_shortcuts(self):
+        """设置快捷键"""
+        # F5: 重新加载样式表
+        reload_style = QShortcut(QKeySequence("F5"), self)
+        reload_style.activated.connect(self.reload_stylesheet)
+
+    def reload_stylesheet(self):
+        """重新加载样式表(F5)"""
+        if self.app_instance:
+            self.app_instance.load_stylesheet()
+            self.statusBar().showMessage("样式表已重新加载 (F5)", 2000)

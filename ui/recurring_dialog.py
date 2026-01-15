@@ -27,35 +27,43 @@ class RecurringTaskDialog(QDialog):
         """初始化界面"""
         self.setWindowTitle("编辑循环任务" if self.is_edit else "新建循环任务")
         self.resize(500, 450)
+        # 对话框样式: styles.qss -> QDialog (白色背景、圆角)
 
         layout = QVBoxLayout(self)
 
         # 表单
         form_layout = QFormLayout()
 
-        # 标题
+        # 标题输入框
+        # 样式: styles.qss -> QLineEdit (边框、圆角、内边距)
         self.title_edit = QLineEdit()
         self.title_edit.setPlaceholderText("输入任务标题")
         form_layout.addRow("标题*:", self.title_edit)
 
-        # 描述
+        # 描述输入框
+        # 样式: styles.qss -> QTextEdit (边框、圆角、内边距)
         self.desc_edit = QTextEdit()
         self.desc_edit.setPlaceholderText("输入任务描述（可选）")
         self.desc_edit.setMaximumHeight(60)
         form_layout.addRow("描述:", self.desc_edit)
 
-        # 提醒时间
+        # 时间选择器(只选时间,不选日期)
+        # 样式: styles.qss -> QTimeEdit (边框、圆角、内边距)
         self.remind_time_edit = QTimeEdit()
-        self.remind_time_edit.setTime(QTime(9, 0))
+        self.remind_time_edit.setTime(QTime(9, 0))  # 默认上午9点
         form_layout.addRow("每日提醒时间*:", self.remind_time_edit)
 
-        # 循环类型
+        # 循环类型下拉框
+        # 样式: styles.qss -> QComboBox (边框、圆角、紫色箭头)
+        # 下拉列表: QComboBox QAbstractItemView (白色背景、紫色选中项)
         self.recur_type_combo = QComboBox()
         self.recur_type_combo.addItems(["每天", "每周", "每月"])
         self.recur_type_combo.currentIndexChanged.connect(self.on_recur_type_changed)
         form_layout.addRow("循环类型*:", self.recur_type_combo)
 
-        # 每周的哪几天（仅每周时显示）
+        # 星期选择复选框（仅"每周"时显示）
+        # 样式: styles.qss -> QCheckBox (圆角复选框)
+        # 选中时: QCheckBox::indicator:checked (紫色背景)
         self.weekdays_widget = QWidget()
         weekdays_layout = QHBoxLayout(self.weekdays_widget)
         weekdays_layout.setContentsMargins(0, 0, 0, 0)
@@ -70,18 +78,22 @@ class RecurringTaskDialog(QDialog):
         form_layout.addRow("重复日期:", self.weekdays_widget)
         self.weekdays_widget.setVisible(False)
 
-        # 结束日期
+        # 结束日期复选框
+        # 样式: styles.qss -> QCheckBox (同上)
         self.has_end_date = QCheckBox("设置结束日期")
         self.has_end_date.stateChanged.connect(self.on_has_end_date_changed)
         form_layout.addRow("", self.has_end_date)
 
+        # 结束日期选择器
+        # 样式: styles.qss -> QDateEdit (继承自 QDateTimeEdit 的样式)
         self.end_date_edit = QDateEdit()
         self.end_date_edit.setDate(QDate.currentDate().addMonths(1))
         self.end_date_edit.setCalendarPopup(True)
         self.end_date_edit.setEnabled(False)
         form_layout.addRow("结束日期:", self.end_date_edit)
 
-        # 标签
+        # 标签输入框
+        # 样式: styles.qss -> QLineEdit (同标题输入框)
         self.tags_edit = QLineEdit()
         self.tags_edit.setPlaceholderText("输入标签，用逗号分隔")
         form_layout.addRow("标签:", self.tags_edit)
@@ -89,6 +101,7 @@ class RecurringTaskDialog(QDialog):
         layout.addLayout(form_layout)
 
         # 按钮
+        # 样式: styles.qss -> QPushButton (紫色渐变、白色文字、圆角)
         btn_layout = QHBoxLayout()
         self.save_btn = QPushButton("保存")
         self.save_btn.clicked.connect(self.on_save)
