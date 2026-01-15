@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python migrate_status.py:*)",
+      "Bash(dir:*)",
+      "Bash(tree:*)",
+      "Bash(python:*)"
+    ]
+  }
+}
