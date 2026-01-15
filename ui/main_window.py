@@ -39,152 +39,215 @@ class MainWindow(QMainWindow):
 
     def init_ui(self):
         """初始化界面"""
+        # 设置窗口标题(显示在标题栏)
         self.setWindowTitle("任务管理器")
+
+        # 设置窗口大小(宽1400像素 x 高800像素)
         self.resize(1400, 800)
 
-        # 中心部件
+        # 创建中心容器(QMainWindow必须有一个中心部件)
         central_widget = QWidget()
-        self.setCentralWidget(central_widget)
+        self.setCentralWidget(central_widget)  # 将容器设置为窗口的中心区域
+
+        # 创建水平布局(让内部元素从左到右排列)
         main_layout = QHBoxLayout(central_widget)
 
-        # 创建分割器
-        splitter = QSplitter(Qt.Horizontal)
+        # 创建分割器(可拖动的分隔线,用于调整左右区域大小)
+        splitter = QSplitter(Qt.Horizontal)  # Qt.Horizontal = 水平分割
 
-        # 左侧边栏
+        # 左侧边栏(筛选按钮区域)
         sidebar = self.create_sidebar()
-        splitter.addWidget(sidebar)
+        splitter.addWidget(sidebar)  # 将侧边栏添加到分割器左侧
 
-        # 右侧主视图
+        # 右侧主视图(任务列表区域)
         main_view = self.create_main_view()
-        splitter.addWidget(main_view)
+        splitter.addWidget(main_view)  # 将主视图添加到分割器右侧
 
-        splitter.setStretchFactor(0, 1)
-        splitter.setStretchFactor(1, 4)
+        # 设置左右区域的初始比例(左:右 = 1:4)
+        splitter.setStretchFactor(0, 1)  # 索引0=左侧,占1份
+        splitter.setStretchFactor(1, 4)  # 索引1=右侧,占4份
 
+        # 将分割器添加到主布局
         main_layout.addWidget(splitter)
 
-        # 创建菜单栏
+        # 创建菜单栏(文件、视图等菜单)
         self.create_menu_bar()
 
-        # 状态栏
-        self.statusBar().showMessage("就绪")
+        # 状态栏(窗口底部显示提示信息的区域)
+        self.statusBar().showMessage("就绪")  # 显示初始提示文本
 
     def create_menu_bar(self):
-        """创建菜单栏"""
+        """创建菜单栏(窗口顶部的 文件/视图 菜单)"""
+        # 获取菜单栏(QMainWindow自带的顶部菜单区域)
         menubar = self.menuBar()
 
-        # 文件菜单
-        file_menu = menubar.addMenu("文件")
-        exit_action = QAction("退出", self)
-        exit_action.triggered.connect(self.close)
-        file_menu.addAction(exit_action)
+        # 文件菜单(第一个菜单)
+        file_menu = menubar.addMenu("文件")  # addMenu = 添加一个下拉菜单
 
-        # 视图菜单
+        # 创建"退出"菜单项
+        exit_action = QAction("退出", self)  # QAction = 可点击的菜单项
+        exit_action.triggered.connect(self.close)  # triggered.connect = 点击时触发,调用self.close()关闭窗口
+        file_menu.addAction(exit_action)  # 将菜单项添加到文件菜单
+
+        # 视图菜单(第二个菜单)
         view_menu = menubar.addMenu("视图")
+
+        # 创建"刷新"菜单项
         refresh_action = QAction("刷新", self)
-        refresh_action.triggered.connect(self.load_tasks)
+        refresh_action.triggered.connect(self.load_tasks)  # 点击时调用self.load_tasks()重新加载任务
         view_menu.addAction(refresh_action)
 
     def create_sidebar(self) -> QWidget:
-        """创建侧边栏"""
+        """创建左侧边栏(筛选视图切换区域)"""
+        # 创建侧边栏容器
         sidebar = QWidget()
+
+        # 创建垂直布局(让内部元素从上到下排列)
         layout = QVBoxLayout(sidebar)
 
-        # 分类标题
+        # 分类标题标签
+        # QLabel = 文本标签控件,用于显示不可编辑的文本
+        # <b>筛选</b> = HTML标签,让文字加粗
         # 样式: styles.qss -> QLabel (深色文字、透明背景)
-        layout.addWidget(QLabel("<b>筛选</b>"))
+        layout.addWidget(QLabel("<b>筛选</b>"))  # addWidget = 将控件添加到布局
 
-        # 分类按钮
+        # 分类按钮列表
         # 注意:这些按钮需要设置 objectName="sidebarButton" 才能应用特殊样式
         # 样式: styles.qss -> QPushButton#sidebarButton (透明背景、左对齐)
         # 选中时: QPushButton#sidebarButton:checked (浅蓝背景、左侧紫色边框)
         categories = [
-            ("all", "📋 所有任务"),
-            ("today", "⭐ 今日任务"),
-            ("recurring", "🔄 循环任务"),
+            ("all", "📋 所有任务"),      # key="all", 显示文本="📋 所有任务"
+            ("today", "⭐ 今日任务"),    # key="today"
+            ("recurring", "🔄 循环任务"), # key="recurring"
         ]
 
+        # 循环创建每个按钮
         for key, label in categories:
-            btn = QPushButton(label)
-            btn.clicked.connect(lambda checked, k=key: self.filter_tasks(k))
-            layout.addWidget(btn)
+            btn = QPushButton(label)  # 创建按钮,显示文本为label
 
+            # clicked.connect = 按钮被点击时触发
+            # lambda = 匿名函数,捕获key值传递给filter_tasks
+            # checked参数是Qt自动传入的(按钮是否被勾选),这里不用
+            btn.clicked.connect(lambda checked, k=key: self.filter_tasks(k))
+
+            layout.addWidget(btn)  # 将按钮添加到布局
+
+        # 添加弹性空间(让上面的按钮靠上,下面留空)
         layout.addStretch()
-        return sidebar
+
+        return sidebar  # 返回创建好的侧边栏控件
 
     def create_main_view(self) -> QWidget:
-        """创建主视图"""
+        """创建右侧主视图(任务列表和工具栏区域)"""
+        # 创建主视图容器
         main_view = QWidget()
+
+        # 创建垂直布局(工具栏在上,任务列表在下)
         layout = QVBoxLayout(main_view)
 
-        # 工具栏按钮
+        # 工具栏(顶部按钮区域)
         # 样式: styles.qss -> QPushButton (紫色渐变、白色文字、圆角)
         # 悬停时: QPushButton:hover (颜色变亮)
         # 按下时: QPushButton:pressed (颜色变深、视觉下沉)
+
+        # 创建水平布局(让按钮从左到右排列)
         toolbar = QHBoxLayout()
+
+        # 创建"新建任务"按钮
         self.add_task_btn = QPushButton("➕ 新建任务")
-        self.add_task_btn.clicked.connect(self.on_add_task)
+        self.add_task_btn.clicked.connect(self.on_add_task)  # 点击时调用on_add_task方法
+
+        # 创建"新建循环任务"按钮
         self.add_recurring_btn = QPushButton("🔄 新建循环任务")
         self.add_recurring_btn.clicked.connect(self.on_add_recurring_task)
+
+        # 创建"新建常驻任务"按钮
         self.add_permanent_btn = QPushButton("📌 新建常驻任务")
         self.add_permanent_btn.clicked.connect(self.on_add_permanent_task)
 
+        # 将三个按钮添加到工具栏
         toolbar.addWidget(self.add_task_btn)
         toolbar.addWidget(self.add_recurring_btn)
         toolbar.addWidget(self.add_permanent_btn)
+
+        # 添加弹性空间(让按钮靠左,右侧留空)
         toolbar.addStretch()
 
+        # 将工具栏添加到主布局(addLayout = 添加一个布局)
         layout.addLayout(toolbar)
 
-        # 左右分栏布局 - 使用 QSplitter
-        splitter = QSplitter(Qt.Horizontal)
+        # 左右分栏布局 - 使用可拖动分割器
+        # QSplitter = 分割器,可以拖动中间的分隔线调整左右区域大小
+        splitter = QSplitter(Qt.Horizontal)  # Horizontal = 水平分割(左右布局)
 
-        # 左侧: 常驻任务区域
-        left_widget = QWidget()
-        left_widget.setStyleSheet("""
-            QWidget {
-                background-color: #f9f9f9;
-                border: 2px solid #d0d0d0;
-                border-radius: 8px;
-            }
-        """)
+        # ========== 左侧区域: 常驻任务 ==========
+        left_widget = QWidget()  # 创建左侧容器
+
+        # setObjectName = 设置对象名称,用于在 QSS 中通过 #名称 选择
+        # 这样可以在 styles.qss 中用 #permanentArea 来设置样式
+        left_widget.setObjectName("permanentArea")
+
+        # 创建垂直布局(标题在上,列表在下)
         left_layout = QVBoxLayout(left_widget)
+
+        # setContentsMargins = 设置内边距(上,右,下,左)
+        # 让内容距离边框10像素
+        # 注意:这个无法在 QSS 中设置,必须在代码中设置
         left_layout.setContentsMargins(10, 10, 10, 10)
 
         # 常驻任务区域标题
         permanent_label = QLabel("📌 常驻任务")
-        permanent_label.setStyleSheet("font-weight: bold; font-size: 16px; padding: 5px; background: transparent; border: none;")
-        left_layout.addWidget(permanent_label)
 
-        # 常驻任务列表(树形控件)
+        # 设置对象名称,方便在 QSS 中设置样式
+        permanent_label.setObjectName("permanentLabel")
+        left_layout.addWidget(permanent_label)  # 添加到布局
+
+        # ===== 常驻任务列表(树形控件) =====
+        # QTreeWidget = 树形列表控件,可以显示分层数据(支持展开/折叠)
         # 样式: styles.qss -> QTreeWidget (白色背景、圆角、无边框)
         # 任务行: QTreeWidget::item (内边距12px 8px、圆角8px、行间距2px)
         # 悬停: QTreeWidget::item:hover (浅灰色背景)
         # 选中: QTreeWidget::item:selected (浅蓝色背景、左侧紫色边框)
         self.permanent_tree = QTreeWidget()
-        self.permanent_tree.setHeaderHidden(True)
-        self.permanent_tree.setRootIsDecorated(False)
-        self.permanent_tree.setStyleSheet("background: white; border: 1px solid #e0e0e0; border-radius: 4px;")
-        self.permanent_tree.setContextMenuPolicy(Qt.CustomContextMenu)
-        self.permanent_tree.customContextMenuRequested.connect(self.show_permanent_context_menu)
-        self.permanent_tree.itemDoubleClicked.connect(self.on_item_double_clicked)
-        left_layout.addWidget(self.permanent_tree)
 
+        # setHeaderHidden(True) = 隐藏表头(常驻任务不需要显示"任务/时间/状态"列名)
+        self.permanent_tree.setHeaderHidden(True)
+
+        # setRootIsDecorated(False) = 不显示根节点的展开/折叠箭头(因为常驻任务是平铺的)
+        self.permanent_tree.setRootIsDecorated(False)
+
+        # 设置对象名称,样式在 styles.qss 中定义
+        self.permanent_tree.setObjectName("permanentTree")
+
+        # setContextMenuPolicy = 设置右键菜单策略
+        # Qt.CustomContextMenu = 使用自定义右键菜单
+        self.permanent_tree.setContextMenuPolicy(Qt.CustomContextMenu)
+
+        # customContextMenuRequested.connect = 右键点击时触发
+        # 连接到 show_permanent_context_menu 方法显示菜单
+        self.permanent_tree.customContextMenuRequested.connect(self.show_permanent_context_menu)
+
+        # itemDoubleClicked.connect = 双击任务项时触发
+        # 连接到 on_item_double_clicked 方法打开编辑对话框
+        self.permanent_tree.itemDoubleClicked.connect(self.on_item_double_clicked)
+
+        left_layout.addWidget(self.permanent_tree)  # 将树形控件添加到布局
+
+        # 将左侧区域添加到分割器
         splitter.addWidget(left_widget)
 
-        # 右侧: 普通任务列表
-        right_widget = QWidget()
-        right_widget.setStyleSheet("""
-            QWidget {
-                background-color: #f9f9f9;
-                border: 2px solid #d0d0d0;
-                border-radius: 8px;
-            }
-        """)
-        right_layout = QVBoxLayout(right_widget)
-        right_layout.setContentsMargins(10, 10, 10, 10)
+        # ========== 右侧区域: 普通任务列表 ==========
+        right_widget = QWidget()  # 创建右侧容器
 
-        # 普通任务列表(树形控件) - 核心UI
+        # 设置对象名称,样式在 styles.qss 中定义
+        right_widget.setObjectName("taskArea")
+
+        # 创建垂直布局
+        right_layout = QVBoxLayout(right_widget)
+        right_layout.setContentsMargins(10, 10, 10, 10)  # 10像素内边距(无法在QSS中设置)
+
+        # ===== 普通任务列表(树形控件) - 核心UI =====
+        # 这是最重要的控件,显示所有普通任务和循环任务实例
         # 样式: styles.qss -> QTreeWidget (白色背景、圆角、无边框)
         # 表头: QHeaderView::section (浅灰背景、大写字母、底部边框)
         # 任务行: QTreeWidget::item (内边距12px 8px、圆角8px、行间距2px)
@@ -192,17 +255,36 @@ class MainWindow(QMainWindow):
         # 选中: QTreeWidget::item:selected (浅蓝色背景 #e6f0ff、左侧紫色边框4px)
         # 滚动条: QScrollBar:vertical (10px宽、透明背景、灰色滑块)
         self.task_tree = QTreeWidget()
+
+        # setHeaderLabels = 设置列名(表头文字)
+        # 这个树形控件有3列: 任务标题、时间、状态
         self.task_tree.setHeaderLabels(["任务", "时间", "状态"])
-        self.task_tree.setColumnWidth(0, 600)  # 任务标题列宽
-        self.task_tree.setColumnWidth(1, 200)  # 时间列宽
-        self.task_tree.setColumnWidth(2, 120)  # 状态列宽
-        self.task_tree.setRootIsDecorated(True)  # 显示展开/折叠箭头
-        self.task_tree.setStyleSheet("background: white; border: 1px solid #e0e0e0; border-radius: 4px;")
+
+        # setColumnWidth = 设置列宽(像素)
+        self.task_tree.setColumnWidth(0, 600)  # 第0列(任务标题)宽600像素
+        self.task_tree.setColumnWidth(1, 200)  # 第1列(时间)宽200像素
+        self.task_tree.setColumnWidth(2, 120)  # 第2列(状态)宽120像素
+
+        # setRootIsDecorated(True) = 显示展开/折叠箭头
+        # 因为普通任务有分组("未完成"/"已完成"),需要展开/折叠
+        self.task_tree.setRootIsDecorated(False)
+
+        # 设置对象名称,样式在 styles.qss 中定义
+        self.task_tree.setObjectName("taskTree")
+
+        # 启用自定义右键菜单
         self.task_tree.setContextMenuPolicy(Qt.CustomContextMenu)
+
+        # 右键点击时显示菜单
         self.task_tree.customContextMenuRequested.connect(self.show_context_menu)
+
+        # 双击任务时编辑
         self.task_tree.itemDoubleClicked.connect(self.on_item_double_clicked)
+
+        # 将任务树添加到布局
         right_layout.addWidget(self.task_tree)
 
+        # 将右侧区域添加到分割器
         splitter.addWidget(right_widget)
 
         # 设置初始比例 (左:右 = 1:2)
@@ -261,7 +343,7 @@ class MainWindow(QMainWindow):
             uncompleted_group = QTreeWidgetItem(self.task_tree)
             uncompleted_group.setText(0, f"📋 未完成 ({len(uncompleted)})")
             uncompleted_group.setExpanded(True)
-            uncompleted_group.setChildIndicatorPolicy(QTreeWidgetItem.ChildIndicatorPolicy.ShowIndicator)
+            #uncompleted_group.setChildIndicatorPolicy(QTreeWidgetItem.ChildIndicatorPolicy.ShowIndicator)
 
             for task in uncompleted:
                 item = QTreeWidgetItem(uncompleted_group)
@@ -275,7 +357,7 @@ class MainWindow(QMainWindow):
             completed_group = QTreeWidgetItem(self.task_tree)
             completed_group.setText(0, f"✅ 已完成 ({len(completed)})")
             completed_group.setExpanded(False)
-            completed_group.setChildIndicatorPolicy(QTreeWidgetItem.ChildIndicatorPolicy.ShowIndicator)
+            #completed_group.setChildIndicatorPolicy(QTreeWidgetItem.ChildIndicatorPolicy.ShowIndicator)
 
             for task in completed:
                 item = QTreeWidgetItem(completed_group)

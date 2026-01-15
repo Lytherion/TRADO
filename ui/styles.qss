@@ -556,3 +556,46 @@ QToolTip {
     font-size: 13px;
     opacity: 230;
 }
+
+
+/* ========================================
+   主窗口自定义区域 - 可热重载
+   应用位置: main_window.py 中设置了 objectName 的控件
+======================================== */
+
+/* 常驻任务区域容器 */
+QWidget#permanentArea {
+    background-color: #f9f9f9;  /* 浅灰色背景 */
+    border: 2px solid #d0d0d0;  /* 2像素灰色边框 */
+    border-radius: 8px;         /* 8像素圆角 */
+}
+
+/* 常驻任务标题 */
+QLabel#permanentLabel {
+    font-weight: bold;
+    font-size: 16px;
+    padding: 5px;
+    background: transparent;
+    border: none;
+}
+
+/* 常驻任务树形列表 */
+QTreeWidget#permanentTree {
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+}
+
+/* 普通任务区域容器 */
+QWidget#taskArea {
+    background-color: #f9f9f9;
+    border: 2px solid #d0d0d0;
+    border-radius: 8px;
+}
+
+/* 普通任务树形列表 */
+QTreeWidget#taskTree {
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+}
