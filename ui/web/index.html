@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>任务管理器</title>
+    <link rel="icon" type="image/png" href="icon.png">
+    <link rel="stylesheet" href="style.css">
+    <script type="text/javascript" src="/eel.js"></script>
+</head>
+<body>
+    <!-- 主容器 -->
+    <div class="main-container">
+        <!-- 左侧边栏 -->
+        <div class="sidebar">
+            <h3 class="sidebar-title"><b>筛选</b></h3>
+            <div class="filter-buttons">
+                <button class="filter-btn active" data-filter="all" onclick="filterTasks('all')">
+                    📋 所有任务
+                </button>
+                <button class="filter-btn" data-filter="today" onclick="filterTasks('today')">
+                    ⭐ 今日任务
+                </button>
+                <button class="filter-btn" data-filter="recurring" onclick="filterTasks('recurring')">
+                    🔄 循环任务
+                </button>
+            </div>
+        </div>
+
+        <!-- 右侧主视图 -->
+        <div class="main-view">
+            <!-- 工具栏 -->
+            <div class="toolbar">
+                <button class="toolbar-btn" onclick="showTaskDialog()">➕ 新建任务</button>
+                <button class="toolbar-btn" onclick="showRecurringDialog()">🔄 新建循环任务</button>
+                <button class="toolbar-btn" onclick="showPermanentDialog()">📌 新建常驻任务</button>
+            </div>
+
+            <!-- 左右分栏区域 -->
+            <div class="content-splitter">
+                <!-- 左侧: 常驻任务 -->
+                <div class="permanent-area">
+                    <h3 class="area-title">📌 常驻任务</h3>
+                    <div class="permanent-list" id="permanentList">
+                        <!-- 常驻任务项将通过 JS 动态插入 -->
+                    </div>
+                </div>
+
+                <!-- 右侧: 普通任务列表 -->
+                <div class="task-area">
+                    <div class="task-list-container" id="taskListContainer">
+                        <!-- 任务组将通过 JS 动态插入 -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 任务对话框 -->
+    <div class="modal" id="taskModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="taskModalTitle">新建任务</h2>
+                <button class="modal-close" onclick="closeTaskDialog()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="taskForm" onsubmit="saveTask(event)">
+                    <div class="form-group">
+                        <label for="taskTitle">标题 *</label>
+                        <input type="text" id="taskTitle" required placeholder="输入任务标题">
+                    </div>
+                    <div class="form-group">
+                        <label for="taskDesc">描述</label>
+                        <textarea id="taskDesc" rows="3" placeholder="输入任务描述（可选）"></textarea>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="taskStartTime">开始时间</label>
+                            <input type="datetime-local" id="taskStartTime">
+                        </div>
+                        <div class="form-group">
+                            <label for="taskDueTime">截止时间 *</label>
+                            <input type="datetime-local" id="taskDueTime" required>
+                        </div>
+                    </div>
+                    <div class="form-group" id="taskStatusGroup" style="display: none;">
+                        <label for="taskStatus">状态</label>
+                        <select id="taskStatus">
+                            <option value="0">未完成</option>
+                            <option value="1">已完成</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="taskTags">标签</label>
+                        <input type="text" id="taskTags" placeholder="输入标签，用逗号分隔（如：工作,紧急）">
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" onclick="closeTaskDialog()">取消</button>
+                        <button type="submit" class="btn btn-primary">保存</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 循环任务对话框 -->
+    <div class="modal" id="recurringModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="recurringModalTitle">新建循环任务</h2>
+                <button class="modal-close" onclick="closeRecurringDialog()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="recurringForm" onsubmit="saveRecurringTask(event)">
+                    <div class="form-group">
+                        <label for="recurringTitle">标题 *</label>
+                        <input type="text" id="recurringTitle" required placeholder="输入任务标题">
+                    </div>
+                    <div class="form-group">
+                        <label for="recurringDesc">描述</label>
+                        <textarea id="recurringDesc" rows="2" placeholder="输入任务描述（可选）"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="recurringRemindTime">每日提醒时间 *</label>
+                        <input type="time" id="recurringRemindTime" value="09:00" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="recurringType">循环类型 *</label>
+                        <select id="recurringType" required onchange="onRecurringTypeChange()">
+                            <option value="daily">每天</option>
+                            <option value="weekly">每周</option>
+                            <option value="monthly">每月</option>
+                        </select>
+                    </div>
+                    <div class="form-group" id="recurringDaysGroup" style="display: none;">
+                        <label>重复日期</label>
+                        <div class="checkbox-group" id="recurringDaysCheckboxes">
+                            <!-- 动态生成 -->
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="hasEndDate" onchange="toggleEndDate()">
+                            设置结束日期
+                        </label>
+                    </div>
+                    <div class="form-group" id="endDateGroup" style="display: none;">
+                        <label for="recurringEndDate">结束日期</label>
+                        <input type="date" id="recurringEndDate">
+                    </div>
+                    <div class="form-group">
+                        <label for="recurringTags">标签</label>
+                        <input type="text" id="recurringTags" placeholder="输入标签，用逗号分隔">
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" onclick="closeRecurringDialog()">取消</button>
+                        <button type="submit" class="btn btn-primary">保存</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 常驻任务对话框 -->
+    <div class="modal" id="permanentModal">
+        <div class="modal-content modal-small">
+            <div class="modal-header">
+                <h2 id="permanentModalTitle">新建常驻任务</h2>
+                <button class="modal-close" onclick="closePermanentDialog()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="permanentForm" onsubmit="savePermanentTask(event)">
+                    <div class="form-group">
+                        <label for="permanentTitle">标题 *</label>
+                        <input type="text" id="permanentTitle" required placeholder="输入任务标题">
+                    </div>
+                    <div class="form-group">
+                        <label for="permanentDesc">描述</label>
+                        <textarea id="permanentDesc" rows="4" placeholder="输入任务描述（可选）"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="permanentTags">标签</label>
+                        <input type="text" id="permanentTags" placeholder="输入标签，用逗号分隔（如：工作,备忘）">
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" onclick="closePermanentDialog()">取消</button>
+                        <button type="submit" class="btn btn-primary">保存</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 提醒弹窗 -->
+    <div class="modal modal-reminder" id="reminderModal">
+        <div class="modal-content modal-small">
+            <div class="modal-header">
+                <h2>⏰ 任务提醒</h2>
+            </div>
+            <div class="modal-body">
+                <h3 id="reminderTaskTitle"></h3>
+                <p id="reminderTaskDesc"></p>
+                <div class="reminder-actions">
+                    <button class="btn btn-success" onclick="completeReminderTask()">
+                        ✓ 完成任务
+                    </button>
+                    <button class="btn btn-warning" onclick="snoozeReminder(10)">
+                        延迟 10 分钟
+                    </button>
+                    <button class="btn btn-warning" onclick="snoozeReminder(30)">
+                        延迟 30 分钟
+                    </button>
+                    <button class="btn btn-warning" onclick="snoozeReminder(60)">
+                        延迟 1 小时
+                    </button>
+                    <div class="snooze-custom">
+                        <input type="number" id="customSnoozeMinutes" placeholder="自定义分钟数" min="1" max="1440">
+                        <button onclick="snoozeCustom()">延迟</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 右键菜单 -->
+    <div class="context-menu" id="contextMenu" style="display: none;">
+        <ul id="contextMenuItems">
+            <!-- 动态生成菜单项 -->
+        </ul>
+    </div>
+
+    <!-- 加载 JavaScript -->
+    <script src="app.js"></script>
+</body>
+</html>

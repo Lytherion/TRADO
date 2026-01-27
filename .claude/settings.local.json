@@ -1,10 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(python migrate_status.py:*)",
-      "Bash(dir:*)",
-      "Bash(tree:*)",
-      "Bash(python:*)"
+      "Bash(python main_webview.py:*)",
+      "Bash(python test_performance.py:*)",
+      "Bash(dir:*)"
     ]
   }
 }

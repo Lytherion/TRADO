@@ -1,17 +1,17 @@
 [project]
-name = "task-manager-qt"
-version = "1.0.0"
-description = "基于 PySide6 的现代化任务管理器，支持普通任务、循环任务和常驻任务"
+name = "task-manager"
+version = "2.0.0"
+description = "基于 Eel 的现代化任务管理器,支持普通任务、循环任务和常驻任务,带 Windows 强制提醒"
 readme = "README.md"
 requires-python = ">=3.10"
 authors = [
     {name = "User", email = "user@example.com"}
 ]
-keywords = ["task", "manager", "qt", "pyside6", "reminder", "productivity"]
+keywords = ["task", "manager", "eel", "reminder", "productivity", "windows"]
 license = {text = "MIT"}
 
 dependencies = [
-    "PySide6>=6.6.0",
+    "eel>=0.16.0",
 ]
 
 [project.optional-dependencies]
@@ -26,7 +26,7 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-packages = ["models", "database", "services", "ui"]
+packages = ["models", "database", "services", "ui.web"]
 
 [tool.black]
 line-length = 100
@@ -48,4 +48,4 @@ warn_unused_configs = true
 disallow_untyped_defs = false
 
 [project.scripts]
-task-manager = "main:TaskManagerApp"
+task-manager = "main_eel:main"

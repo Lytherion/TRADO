@@ -55,12 +55,12 @@ class RecurringTaskService:
             return False
 
         # 根据循环类型判断
-        if recurring_task.recur_type == RecurType.DAILY:
+        if recurring_task.recur_type == RecurType.daily:
             return True
-        elif recurring_task.recur_type == RecurType.WEEKLY:
+        elif recurring_task.recur_type == RecurType.weekly:
             weekday = target_date.weekday()  # 0-6
             return weekday in recurring_task.recur_days
-        elif recurring_task.recur_type == RecurType.MONTHLY:
+        elif recurring_task.recur_type == RecurType.monthly:
             # 每月的相同日期
             return True
 

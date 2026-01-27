@@ -53,9 +53,19 @@ class ReminderService:
         tasks = self.check_reminders()
 
         for task in tasks:
-            # 触发回调 - 不在这里标记已提醒,而是在用户实际处理后才标记
+            # 加入处理中集合,防止重复触发
+            self.processing_tasks.add(task.id)
+
+            # 立即标记为已提醒,防止重复弹窗
+            task.notified = True
+            self.task_service.update_task(task)
+
+            # 触发回调
             if self.reminder_callback:
                 self.reminder_callback(task)
+
+            # 从处理集合中移除
+            self.processing_tasks.discard(task.id)
 
     def snooze_reminder(self, task_id: int, minutes: int):
         """延迟提醒"""

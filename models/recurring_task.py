@@ -20,7 +20,7 @@ class RecurringTask:
     tags: List[str] = field(default_factory=list)
 
     # 循环规则
-    recur_type: RecurType = RecurType.DAILY
+    recur_type: RecurType = RecurType.daily
     recur_interval: int = 1  # 间隔数
     recur_days: List[int] = field(default_factory=list)  # 每周哪几天 [0-6]
     recur_end_date: Optional[date] = None

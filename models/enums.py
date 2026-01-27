@@ -12,6 +12,6 @@ class TaskStatus(IntEnum):
 
 class RecurType(Enum):
     """循环类型"""
-    DAILY = "daily"      # 每天
-    WEEKLY = "weekly"    # 每周
-    MONTHLY = "monthly"  # 每月
+    daily = "daily"      # 每天
+    weekly = "weekly"    # 每周
+    monthly = "monthly"  # 每月

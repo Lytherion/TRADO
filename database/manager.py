@@ -20,16 +20,29 @@ class DatabaseManager:
         with open(schema_path, "r", encoding="utf-8") as f:
             schema_sql = f.read()
 
-        with self.get_conn() as conn:
+        # 临时创建一个连接来初始化数据库
+        conn = sqlite3.connect(self.db_path, timeout=30.0)
+        try:
             conn.executescript(schema_sql)
             conn.commit()
+        finally:
+            conn.close()
 
     @contextmanager
     def get_conn(self):
         """获取数据库连接（上下文管理器）"""
-        conn = sqlite3.connect(self.db_path)
+        # 设置超时避免死锁,启用 WAL 模式提高并发性能
+        conn = sqlite3.connect(
+            self.db_path,
+            timeout=30.0,  # 30秒超时
+            check_same_thread=False,  # 允许多线程使用
+            isolation_level=None  # 自动提交模式,减少锁冲突
+        )
         conn.row_factory = sqlite3.Row  # 返回字典格式
         try:
+            # 启用 WAL 模式(Write-Ahead Logging)提高并发性能
+            conn.execute('PRAGMA journal_mode=WAL')
+            conn.execute('PRAGMA synchronous=NORMAL')  # 平衡性能和安全
             yield conn
         finally:
             conn.close()
@@ -39,7 +52,7 @@ class DatabaseManager:
         with self.get_conn() as conn:
             cursor = conn.cursor()
             cursor.execute(sql, params)
-            conn.commit()
+            # isolation_level=None 时自动提交,无需手动 commit
             return cursor.lastrowid if sql.strip().upper().startswith("INSERT") else cursor.rowcount
 
     def query_one(self, sql: str, params: tuple = ()) -> Optional[Dict[str, Any]]:

@@ -4,153 +4,180 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 项目概述
 
-基于 PySide6 的现代化任务管理应用,支持两种任务类型:
-- **普通任务**: 标准的待办事项,支持提醒、标签等
-- **循环任务**: 每日/每周/每月重复任务,自动生成实例
-- **常驻任务**: 备忘录式长期任务,无截止日期和状态,用于保存重要笔记和想法
+这是一个任务管理器应用,使用 PyWebView 作为 UI 层,Python 作为业务逻辑层,SQLite 作为数据存储。
 
-## 常用命令
+**核心特性:**
+- 支持三种任务类型:普通任务、循环任务、常驻任务
+- 提供任务提醒功能
+- 使用 Web 技术(HTML/CSS/JavaScript)构建现代化 UI
+- Python 后端处理所有业务逻辑
 
+## 开发环境
+
+### 运行应用
 ```bash
+# 运行 PyWebView 版本(当前主版本)
+python main_webview.py
+
+# 或使用已安装的命令
+task-manager
+```
+
+### 依赖管理
+```bash
+# 激活虚拟环境(如果使用)
+.venv\Scripts\activate  # Windows
+source .venv/bin/activate  # macOS/Linux
+
 # 安装依赖
 pip install -e .
-
-# 运行应用
-python main.py
-
-# 或者安装后直接运行
-task-manager
-
-# 开发工具(可选)
-pip install -e ".[dev]"
-black .              # 代码格式化
-mypy .               # 类型检查
 ```
 
-## 核心架构
+## 架构设计
 
-### 应用入口与服务注册
+### 三层架构
 
-[main.py](main.py) 是应用入口,采用**服务注入模式**:
-1. 初始化 `DatabaseManager` (SQLite)
-2. 创建三个核心服务: `TaskService`, `RecurringTaskService`, `PermanentTaskService`
-3. 创建 `ReminderService` 并设置回调
-4. 将所有服务注入到 `MainWindow`
+```
+┌─────────────────┐
+│  UI Layer       │  ui/web/ (HTML/CSS/JS)
+│  PyWebView      │  前端界面与用户交互
+└────────┬────────┘
+         │ window.pywebview.api
+┌────────┴────────┐
+│  Service Layer  │  services/ (Python)
+│  业务逻辑       │  TaskService, RecurringTaskService等
+└────────┬────────┘
+         │
+┌────────┴────────┐
+│  Data Layer     │  database/ + models/
+│  数据库访问     │  DatabaseManager + SQLite
+└─────────────────┘
+```
 
-### 数据层设计
+### 前后端通信
 
-- **DatabaseManager** ([database/manager.py](database/manager.py)): 封装所有 SQL 操作,提供 CRUD 接口
-- **Schema** ([database/schema.sql](database/schema.sql)): 3个表设计
-  - `tasks`: 所有任务实例(包括普通任务和循环任务生成的实例)
-  - `recurring_tasks`: 循环任务模板
-  - `permanent_tasks`: 常驻任务(备忘录)
-  - `settings`: 应用配置
-
-**关键关联**:
-- 循环任务通过 `recurring_id` 关联到生成的任务实例
-
-### 业务逻辑层
-
-**Services 职责划分**:
-
-1. **TaskService**: 管理所有任务实例(普通任务 + 循环任务生成的实例)
-   - CRUD 操作
-   - 状态管理(未完成/已完成)
-   - 筛选查询(今日任务、本周任务等)
-
-2. **RecurringTaskService**: 循环任务管理
-   - **核心机制**: 每天午夜自动生成当日实例,销毁前一天的旧实例
-   - 支持 daily/weekly/monthly 三种循环类型
-   - `should_generate_today()`: 判断是否应为某日生成实例
-   - `generate_task_instances()`: 批量生成实例
-   - `cleanup_old_instances()`: 清理旧实例
-
-3. **PermanentTaskService**: 常驻任务管理
-   - 管理备忘录式长期任务
-   - CRUD 操作和标签管理
-   - 不涉及状态变更,仅用于信息存储
-
-4. **ReminderService**: 提醒系统
-   - 每分钟检查到期任务(通过 Qt 定时器)
-   - 支持 Snooze 延迟提醒
-   - 回调模式触发 UI 弹窗
-
-### UI 层设计
-
-**主窗口架构** ([ui/main_window.py](ui/main_window.py)):
-- 左侧边栏: 任务视图切换(所有任务/今日任务/循环任务/常驻任务)
-- 中间区域: 任务列表,按 remind_time 排序(无提醒时间的排在最后),支持分组显示(未完成/已完成)
-- 顶部工具栏: 新建任务/循环任务/常驻任务按钮
-- 双击任务项可直接编辑
-
-**对话框**:
-- `TaskDialog`: 创建/编辑普通任务
-- `RecurringDialog`: 创建循环任务,选择循环类型和重复日期
-- `PermanentTaskDialog`: 创建/编辑常驻任务
-- `ReminderWidget`: **模态提醒弹窗**,用户必须处理,支持完成/延迟/忽略操作
-
-**系统托盘** ([ui/tray_icon.py](ui/tray_icon.py)):
-- 最小化到托盘常驻后台
-- 托盘通知提醒
-
-## 数据模型
-
-定义在 [models/enums.py](models/enums.py) 和 [models/](models/) 目录:
-
-**枚举类型**:
-- `TaskStatus`: 未完成(0)/已完成(1)
-- `RecurType`: daily/weekly/monthly
-
-**数据模型**:
-- `Task` ([models/task.py](models/task.py)): 普通任务数据模型
-- `RecurringTask` ([models/recurring_task.py](models/recurring_task.py)): 循环任务数据模型
-- `PermanentTask` ([models/permanent_task.py](models/permanent_task.py)): 常驻任务数据模型(备忘录)
-
-## 配置管理
-
-[config.py](config.py) 定义:
-- `DB_PATH`: 数据库路径 (tasks.db)
-- `DEFAULT_CONFIG`: 提醒检查间隔(60秒)、延迟时长(10分钟)、清理时间(午夜)
-- `STATUS_COLORS`: 状态颜色映射
-
-## 关键实现细节
-
-### 循环任务实例生成机制
-
-1. 循环任务保存在 `recurring_tasks` 表作为模板
-2. 每天午夜检查所有活跃的循环任务
-3. 根据 `recur_type` 和 `recur_days` 判断是否应为今日生成
-4. 生成的任务实例保存在 `tasks` 表,带 `recurring_id` 外键
-5. 同时删除前一天的旧实例(无论是否完成)
-
-### 任务排序机制
-
-任务列表按以下规则排序:
-1. 按 `remind_time` 升序排列(提醒时间越近越靠前)
-2. 无 `remind_time` 的任务排在列表最后(使用 `datetime.max` 作为排序键)
-3. 同一分类(未完成/已完成)内独立排序
-
-**实现**:
+**Python → JavaScript:**
 ```python
-tasks.sort(key=lambda t: t.remind_time if t.remind_time else datetime.max)
+# 在 Python 中调用前端 JS 函数
+self.window.evaluate_js('showReminderDialog(1, "任务标题")')
 ```
 
-### 提醒检查流程
+**JavaScript → Python:**
+```javascript
+// 前端调用 Python API
+const tasks = await window.pywebview.api.get_all_tasks();
+await window.pywebview.api.create_task(taskData);
+```
 
-1. Qt 定时器每 60 秒调用 `ReminderService.trigger_reminders()`
-2. 检查所有未完成任务的 `remind_time`
-3. 跳过已提醒(`notified=1`)或 Snooze 中的任务
-4. 触发回调显示 `ReminderWidget` **模态弹窗**
-5. 用户必须处理提醒:
-   - 完成任务: 标记完成并刷新任务列表
-   - Snooze X 分钟: 延迟提醒
-   - 忽略: 关闭弹窗但不做处理
+## 核心模块说明
 
-## 数据库文件位置
+### 1. WebAPI 类 (main_webview.py)
+- 暴露给前端的所有 API 接口
+- 负责数据格式转换(Python 对象 ↔ JSON)
+- 所有前端请求都通过这个类处理
 
-- 默认: 项目根目录 `tasks.db`
-- 自动创建,包含完整 schema 和索引
+### 2. 服务层 (services/)
+- **TaskService**: 普通任务的 CRUD 和状态管理
+- **RecurringTaskService**: 循环任务管理,自动生成任务实例
+- **PermanentTaskService**: 常驻任务(备忘录)管理
+- **ReminderService**: 定时检查并触发任务提醒
 
-## 样式文件
+### 3. 数据模型 (models/)
+- **Task**: 普通任务模型
+- **RecurringTask**: 循环任务模型
+- **PermanentTask**: 常驻任务模型
+- **TaskStatus**: 任务状态枚举(TODO=0, COMPLETED=1)
+- **RecurType**: 循环类型枚举(DAILY, WEEKLY, MONTHLY)
 
-[ui/styles.qss](ui/styles.qss) - Qt 样式表,定义现代化 UI 外观
+### 4. 数据库层 (database/)
+- **DatabaseManager**: 数据库操作的统一入口
+- **schema.sql**: 数据库表结构定义
+- 使用 SQLite,数据库文件位于 `tasks.db`
+
+### 5. 前端代码 (ui/web/)
+- **index.html**: UI 结构
+- **style.css**: 样式定义
+- **app.js**: 前端逻辑、API 调用、事件处理
+
+## 数据库表结构
+
+### tasks (普通任务)
+- 基本字段: id, title, description
+- 时间字段: due_time, remind_time, created_at, completed_at
+- 状态字段: status (0=未完成, 1=已完成)
+- 关联字段: recurring_id (关联循环任务)
+- 提醒字段: notified, snooze_until
+
+### recurring_tasks (循环任务)
+- 基本字段: id, title, description, remind_time
+- 循环规则: recur_type, recur_days, recur_end_date
+- 实例管理: last_generated_date, next_generate_date
+- 状态字段: is_active
+
+### permanent_tasks (常驻任务)
+- 简单的备忘录,只包含 title, description, tags
+
+## 关键业务逻辑
+
+### 循环任务生成机制
+- RecurringTaskService 负责根据循环规则自动生成普通任务实例
+- 生成的任务实例通过 `recurring_id` 字段关联到循环任务
+- 每天自动检查是否需要生成新的任务实例
+
+### 任务提醒系统
+- ReminderService 定时检查所有未提醒的任务
+- 当到达 remind_time 时触发提醒回调
+- 支持延迟提醒(snooze)功能
+
+### 任务状态管理
+- 使用 TaskStatus 枚举管理状态
+- 完成任务时自动记录 completed_at 时间戳
+- 修改提醒时间时自动重置 notified 标志
+
+## 文件路径约定
+
+- 配置文件: `config.py` (包含数据库路径、默认配置等)
+- 数据库文件: `tasks.db` (项目根目录)
+- Web 资源: `ui/web/` (HTML/CSS/JS)
+- SQL Schema: `database/schema.sql`
+
+## 常见开发任务
+
+### 添加新的 API 接口
+1. 在 `WebAPI` 类中添加新方法
+2. 在 `ui/web/app.js` 中调用新 API
+3. 如需 UI 更新,修改 `index.html` 和 `style.css`
+
+### 修改数据库表结构
+1. 更新 `database/schema.sql`
+2. 更新相应的模型类(models/)
+3. 更新 DatabaseManager 中的相关方法
+4. 考虑数据迁移(如果需要)
+
+### 修改前端 UI
+- 直接编辑 `ui/web/` 下的文件
+- 重启应用即可看到效果
+- 可使用浏览器开发者工具调试
+
+## 注意事项
+
+1. **时间处理**:
+   - Python 使用 datetime 对象
+   - 前端使用 ISO 格式字符串
+   - WebAPI 负责格式转换
+
+2. **数据库连接**:
+   - 使用上下文管理器确保连接正确关闭
+   - 所有数据库操作通过 DatabaseManager
+
+3. **枚举类型**:
+   - TaskStatus 是 IntEnum (存储为整数)
+   - RecurType 是 Enum (存储为字符串)
+
+4. **前端异步**:
+   - 所有 Python API 调用都是异步的
+   - 使用 async/await 处理
+
+5. **错误处理**:
+   - 代码遵循"满足基本使用规避大部分问题"原则
+   - 无需过度复杂的异常处理
