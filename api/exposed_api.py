@@ -8,6 +8,7 @@ from models.task import Task
 from models.recurring_task import RecurringTask
 from models.permanent_task import PermanentTask
 from .converters import task_to_dict, recurring_task_to_dict, permanent_task_to_dict
+from services.is_trade_day import is_trade_day
 
 
 # 全局应用实例引用
@@ -58,6 +59,13 @@ def get_task(task_id):
 def create_task(task_data):
     if not _check_ready():
         return {'success': False, 'message': '服务未就绪'}
+    if task_data.get('remind_time'):
+        remind_date = task_data['remind_time'][:10]
+        try:
+            if not is_trade_day(remind_date):
+                return {'success': False, 'message': f'提醒日期 {remind_date} 不是交易日'}
+        except Exception:
+            pass  # 网络异常时不阻拦
     task = Task(
         title=task_data['title'],
         description=task_data.get('description', ''),
@@ -74,6 +82,13 @@ def create_task(task_data):
 def update_task(task_id, task_data):
     if not _check_ready():
         return {'success': False, 'message': '服务未就绪'}
+    if task_data.get('remind_time'):
+        remind_date = task_data['remind_time'][:10]
+        try:
+            if not is_trade_day(remind_date):
+                return {'success': False, 'message': f'提醒日期 {remind_date} 不是交易日'}
+        except Exception:
+            pass  # 网络异常时不阻拦
     task = Task(
         id=task_id,
         title=task_data['title'],
@@ -247,6 +262,16 @@ def snooze_reminder(task_id, minutes):
 @eel.expose
 def dismiss_reminder():
     return {'success': True}
+
+
+# ========== 工具 API ==========
+@eel.expose
+def check_trade_day(date_str):
+    """检查指定日期是否为交易日，date_str 格式 YYYY-MM-DD"""
+    try:
+        return {'is_trade_day': is_trade_day(date_str)}
+    except Exception:
+        return {'is_trade_day': True}  # 网络异常时不阻拦用户
 
 
 # ========== 前端通知 API ==========

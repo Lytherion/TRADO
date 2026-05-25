@@ -73,16 +73,17 @@ class DatabaseManager:
     # ========== 任务相关 ==========
     def insert_task(self, task_dict: dict) -> int:
         """插入任务"""
-        fields = list(task_dict.keys())
+        fields = [k for k in task_dict if k in self._TASK_COLUMNS]
         placeholders = ",".join(["?"] * len(fields))
         sql = f"INSERT INTO tasks ({','.join(fields)}) VALUES ({placeholders})"
-        return self.execute(sql, tuple(task_dict.values()))
+        return self.execute(sql, tuple(task_dict[k] for k in fields))
 
     def update_task(self, task_id: int, task_dict: dict) -> int:
         """更新任务"""
-        set_clause = ",".join([f"{k}=?" for k in task_dict.keys()])
+        fields = [k for k in task_dict if k in self._TASK_COLUMNS]
+        set_clause = ",".join([f"{k}=?" for k in fields])
         sql = f"UPDATE tasks SET {set_clause} WHERE id=?"
-        return self.execute(sql, tuple(task_dict.values()) + (task_id,))
+        return self.execute(sql, tuple(task_dict[k] for k in fields) + (task_id,))
 
     def delete_task(self, task_id: int) -> int:
         """删除任务"""
@@ -92,6 +93,12 @@ class DatabaseManager:
         """获取单个任务"""
         return self.query_one("SELECT * FROM tasks WHERE id=?", (task_id,))
 
+    _TASK_COLUMNS = frozenset({
+        "id", "title", "description", "start_time", "due_time", "remind_time",
+        "status", "tags", "recurring_id", "notified", "snooze_until",
+        "created_at", "updated_at", "completed_at",
+    })
+
     def get_all_tasks(self, filters: Optional[dict] = None) -> List[dict]:
         """获取所有任务（支持过滤）"""
         sql = "SELECT * FROM tasks"
@@ -100,6 +107,8 @@ class DatabaseManager:
         if filters:
             conditions = []
             for key, value in filters.items():
+                if key not in self._TASK_COLUMNS:
+                    raise ValueError(f"非法过滤字段: {key}")
                 conditions.append(f"{key}=?")
                 params.append(value)
             if conditions:
@@ -114,18 +123,25 @@ class DatabaseManager:
         return self.query_all(sql)
 
     # ========== 循环任务相关 ==========
+    _RECURRING_COLUMNS = frozenset({
+        "id", "title", "description", "remind_time", "tags",
+        "recur_type", "recur_interval", "recur_days", "recur_end_date",
+        "last_generated_date", "next_generate_date", "is_active", "created_at",
+    })
+
     def insert_recurring_task(self, task_dict: dict) -> int:
         """插入循环任务"""
-        fields = list(task_dict.keys())
+        fields = [k for k in task_dict if k in self._RECURRING_COLUMNS]
         placeholders = ",".join(["?"] * len(fields))
         sql = f"INSERT INTO recurring_tasks ({','.join(fields)}) VALUES ({placeholders})"
-        return self.execute(sql, tuple(task_dict.values()))
+        return self.execute(sql, tuple(task_dict[k] for k in fields))
 
     def update_recurring_task(self, task_id: int, task_dict: dict) -> int:
         """更新循环任务"""
-        set_clause = ",".join([f"{k}=?" for k in task_dict.keys()])
+        fields = [k for k in task_dict if k in self._RECURRING_COLUMNS]
+        set_clause = ",".join([f"{k}=?" for k in fields])
         sql = f"UPDATE recurring_tasks SET {set_clause} WHERE id=?"
-        return self.execute(sql, tuple(task_dict.values()) + (task_id,))
+        return self.execute(sql, tuple(task_dict[k] for k in fields) + (task_id,))
 
     def delete_recurring_task(self, task_id: int) -> int:
         """删除循环任务"""

@@ -3,13 +3,11 @@ __pycache__/
 *.py[cod]
 *$py.class
 *.so
-.Python
 
 # 虚拟环境
 .venv/
 venv/
 ENV/
-env/
 
 # IDE
 .vscode/
@@ -18,7 +16,7 @@ env/
 *.swo
 *~
 
-# 数据库
+# 数据库（含用户数据，不提交）
 *.db
 *.sqlite
 *.sqlite3
@@ -38,5 +36,4 @@ build/
 *.spec
 
 # uv
-uv.lock
 .python-version

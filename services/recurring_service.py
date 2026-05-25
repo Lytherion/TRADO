@@ -6,6 +6,7 @@ from typing import List
 from models import RecurringTask, Task, RecurType, TaskStatus
 from database import DatabaseManager
 from .task_service import TaskService
+from .is_trade_day import is_trade_day
 
 
 class RecurringTaskService:
@@ -54,6 +55,11 @@ class RecurringTaskService:
         if recurring_task.last_generated_date and recurring_task.last_generated_date >= target_date:
             return False
 
+        date_str = target_date.strftime('%Y-%m-%d')
+        # 所有类型统一要求是交易日
+        if not is_trade_day(date_str):
+            return False
+
         # 根据循环类型判断
         if recurring_task.recur_type == RecurType.daily:
             return True
@@ -61,8 +67,9 @@ class RecurringTaskService:
             weekday = target_date.weekday()  # 0-6
             return weekday in recurring_task.recur_days
         elif recurring_task.recur_type == RecurType.monthly:
-            # 每月的相同日期
-            return True
+            if not recurring_task.recur_days:
+                return False
+            return target_date.day in recurring_task.recur_days
 
         return False
 

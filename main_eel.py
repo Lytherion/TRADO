@@ -7,6 +7,7 @@ import atexit
 from pathlib import Path
 from threading import Timer, Thread
 import time
+import keyboard
 
 from database.manager import DatabaseManager
 from services.task_service import TaskService
@@ -131,6 +132,17 @@ class TaskManagerEelApp:
         self.reminder_timer.daemon = True
         self.reminder_timer.start()
 
+    def _start_hotkey(self):
+        """注册全局快捷键 Ctrl+Alt+0"""
+        def on_hotkey():
+            try:
+                eel.showTaskDialogFromHotkey()
+            except Exception:
+                pass
+
+        keyboard.add_hotkey('ctrl+alt+0', on_hotkey)
+        keyboard.wait()  # 阻塞，保持监听
+
     def init_services_from_frontend(self):
         """由前端调用的初始化方法"""
         if self._services_ready:
@@ -138,6 +150,8 @@ class TaskManagerEelApp:
             return
         init_thread = Thread(target=self._init_services, daemon=True)
         init_thread.start()
+        hotkey_thread = Thread(target=self._start_hotkey, daemon=True)
+        hotkey_thread.start()
 
     def cleanup(self):
         """清理资源"""
@@ -162,8 +176,11 @@ class TaskManagerEelApp:
         # 注册退出清理
         atexit.register(self.cleanup)
 
-        # 初始化 Eel
-        web_dir = Path(__file__).parent / "ui" / "web"
+        # 初始化 Eel（打包后资源在 sys._MEIPASS 下）
+        if getattr(sys, 'frozen', False):
+            web_dir = Path(sys._MEIPASS) / "ui" / "web"
+        else:
+            web_dir = Path(__file__).parent / "ui" / "web"
         eel.init(str(web_dir))
 
         print("启动 Eel 应用...")

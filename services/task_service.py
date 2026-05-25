@@ -80,11 +80,8 @@ class TaskService:
     def snooze_task(self, task_id: int, minutes: int):
         """延迟任务提醒"""
         task = self.get_task(task_id)
-        if task and task.remind_time:
+        if task:
             from datetime import timedelta
-            new_time = datetime.now() + timedelta(minutes=minutes)
-            task.snooze_until = new_time
-            task.remind_time = new_time
-            task.due_time = new_time  # 截止时间也同步延迟
+            task.snooze_until = datetime.now() + timedelta(minutes=minutes)
             task.notified = False
             self.update_task(task)

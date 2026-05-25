@@ -127,9 +127,9 @@
                     <div class="form-group">
                         <label for="recurringType">循环类型 *</label>
                         <select id="recurringType" required onchange="onRecurringTypeChange()">
-                            <option value="daily">每天</option>
-                            <option value="weekly">每周</option>
-                            <option value="monthly">每月</option>
+                            <option value="daily">每交易日</option>
+                            <option value="weekly">每周（仅交易日触发）</option>
+                            <option value="monthly">每月（仅交易日触发）</option>
                         </select>
                     </div>
                     <div class="form-group" id="recurringDaysGroup" style="display: none;">

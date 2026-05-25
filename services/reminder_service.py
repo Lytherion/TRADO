@@ -5,6 +5,7 @@ from datetime import datetime
 from typing import List, Callable
 from models import Task
 from .task_service import TaskService
+from .is_trade_day import is_today_trade_day
 
 
 class ReminderService:
@@ -49,7 +50,9 @@ class ReminderService:
         return tasks_to_remind
 
     def trigger_reminders(self):
-        """触发提醒检查并执行回调"""
+        """触发提醒检查并执行回调（仅交易日）"""
+        if not is_today_trade_day():
+            return
         tasks = self.check_reminders()
 
         for task in tasks:
