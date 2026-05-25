@@ -1,17 +1,17 @@
 import requests
-from datetime import datetime
+from datetime import datetime, date, timedelta
 
-_trade_dates: set = set()  # 已从 API 拉取的交易日集合
-_fetched = False            # 是否已成功拉取过
+_trade_dates: set = set()
+_fetched = False
 
 
 def _fetch_trade_dates() -> bool:
-    """从腾讯金融 API 拉取最近 30 个交易日，缓存到 _trade_dates。"""
+    """从腾讯金融 API 拉取最近 100 个交易日，缓存到 _trade_dates。"""
     global _fetched
     if _fetched:
         return True
     try:
-        url = "https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=sh000001,day,,,30,"
+        url = "https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=sh000001,day,,,100,"
         resp = requests.get(url, timeout=10)
         data = resp.json()
         kline = data["data"]["sh000001"]["day"]
@@ -38,6 +38,17 @@ def is_trade_day(check_date: str = None) -> bool:
 
 def is_today_trade_day() -> bool:
     return is_trade_day(datetime.today().strftime("%Y-%m-%d"))
+
+
+def next_trade_day(from_date: date) -> date:
+    """返回 from_date 之后（不含当天）的第一个交易日，网络失败时最多找 30 天。"""
+    _fetch_trade_dates()
+    d = from_date + timedelta(days=1)
+    for _ in range(30):
+        if is_trade_day(d.strftime("%Y-%m-%d")):
+            return d
+        d += timedelta(days=1)
+    return d  # 兜底
 
 
 if __name__ == "__main__":

@@ -7,9 +7,10 @@ const state = {
     editingTask: null,
     editingRecurring: null,
     editingPermanent: null,
-    reminderTask: null,
     selectedGroupHeader: null
 };
+
+const DEFAULT_SNOOZE_MINUTES = 9;
 
 // ===== 初始化 =====
 document.addEventListener('DOMContentLoaded', () => {
@@ -20,12 +21,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
 let servicesReadyCalled = false;
 
-window.onServicesReady = function() {
+function onServicesReady() {
     if (servicesReadyCalled) return;
     servicesReadyCalled = true;
     hideLoadingIndicator();
     loadAllData().catch(err => console.error('数据加载失败:', err));
-};
+}
+window.onServicesReady = onServicesReady;
+eel.expose(onServicesReady);
 
 window.reloadTasks = function() {
     loadTasks().catch(err => console.error('刷新任务失败:', err));
@@ -36,6 +39,16 @@ window.showTaskDialogFromHotkey = function() {
     showTaskDialog();
 };
 eel.expose(showTaskDialogFromHotkey);
+
+async function checkHotkeyAction() {
+    try {
+        const pending = await eel.consume_hotkey_action()();
+        if (pending) showTaskDialog();
+    } catch(e) {}
+}
+
+setInterval(checkHotkeyAction, 500);
+
 
 function showLoadingIndicator() {
     const container = document.getElementById('taskListContainer');
@@ -125,17 +138,13 @@ function renderTaskList() {
 
         uncompleted = state.tasks.filter(t => {
             if (t.status !== 0) return false;
-            if (t.due_time && new Date(t.due_time) >= todayStart && new Date(t.due_time) <= todayEnd) return true;
-            if (t.remind_time && new Date(t.remind_time) >= todayStart && new Date(t.remind_time) <= todayEnd) return true;
-            return false;
+            return t.remind_time && new Date(t.remind_time) >= todayStart && new Date(t.remind_time) <= todayEnd;
         });
 
         completed = state.tasks.filter(t => {
             if (t.status !== 1) return false;
             if (t.completed_at && new Date(t.completed_at) >= todayStart && new Date(t.completed_at) <= todayEnd) return true;
-            if (t.due_time && new Date(t.due_time) >= todayStart && new Date(t.due_time) <= todayEnd) return true;
-            if (t.remind_time && new Date(t.remind_time) >= todayStart && new Date(t.remind_time) <= todayEnd) return true;
-            return false;
+            return t.remind_time && new Date(t.remind_time) >= todayStart && new Date(t.remind_time) <= todayEnd;
         });
     } else {
         uncompleted = state.tasks.filter(t => t.status === 0);
@@ -143,9 +152,11 @@ function renderTaskList() {
     }
 
     const sortTasks = tasks => tasks.sort((a, b) => {
-        if (!a.remind_time) return 1;
-        if (!b.remind_time) return -1;
-        return new Date(a.remind_time) - new Date(b.remind_time);
+        const aTime = a.remind_time;
+        const bTime = b.remind_time;
+        if (!aTime) return 1;
+        if (!bTime) return -1;
+        return new Date(aTime) - new Date(bTime);
     });
 
     sortTasks(uncompleted);
@@ -211,6 +222,7 @@ function renderTaskItem(task) {
         </div>
     `;
 }
+
 
 function selectTaskItem(event) {
     document.querySelectorAll('.task-item').forEach(item => item.classList.remove('selected'));
@@ -337,7 +349,7 @@ function showTaskDialog(taskId = null) {
             document.getElementById('taskTitle').value = task.title;
             document.getElementById('taskDesc').value = task.description || '';
             document.getElementById('taskStartTime').value = formatDateTimeInput(task.start_time);
-            document.getElementById('taskDueTime').value = formatDateTimeInput(task.due_time);
+            document.getElementById('taskRemindTime').value = formatDateTimeInput(task.remind_time);
             document.getElementById('taskStatus').value = task.status;
             document.getElementById('taskTags').value = task.tags ? task.tags.join(',') : '';
         }
@@ -347,10 +359,11 @@ function showTaskDialog(taskId = null) {
         const now = new Date();
         document.getElementById('taskStartTime').value = formatDateTimeInput(now.toISOString());
         const oneHourLater = new Date(now.getTime() + 60 * 60 * 1000);
-        document.getElementById('taskDueTime').value = formatDateTimeInput(oneHourLater.toISOString());
+        document.getElementById('taskRemindTime').value = formatDateTimeInput(oneHourLater.toISOString());
     }
 
     modal.classList.add('show');
+    setTimeout(() => document.getElementById('taskTitle').focus(), 50);
 }
 
 function closeTaskDialog() {
@@ -361,9 +374,9 @@ function closeTaskDialog() {
 async function saveTask(event) {
     event.preventDefault();
 
-    const dueTimeVal = document.getElementById('taskDueTime').value;
-    if (dueTimeVal) {
-        const remindDate = dueTimeVal.substring(0, 10);
+    const remindTimeVal = document.getElementById('taskRemindTime').value;
+    if (remindTimeVal) {
+        const remindDate = remindTimeVal.substring(0, 10);
         const tradeCheck = await eel.check_trade_day(remindDate)();
         if (!tradeCheck.is_trade_day) {
             alert(`提醒日期 ${remindDate} 不是交易日，请选择交易日`);
@@ -375,8 +388,7 @@ async function saveTask(event) {
         title: document.getElementById('taskTitle').value,
         description: document.getElementById('taskDesc').value,
         start_time: document.getElementById('taskStartTime').value,
-        due_time: dueTimeVal,
-        remind_time: dueTimeVal,
+        remind_time: remindTimeVal,
         tags: document.getElementById('taskTags').value.split(',').map(t => t.trim()).filter(t => t)
     };
 
@@ -614,86 +626,6 @@ async function deletePermanentTask(taskId) {
         console.error('删除常驻任务失败:', error);
         alert('删除失败');
     }
-}
-
-// ===== 提醒对话框 =====
-function showReminderDialog(taskId, taskTitle = '') {
-    loadTasks().then(() => {
-        const task = state.tasks.find(t => t.id === taskId);
-        if (!task) return;
-
-        state.reminderTask = task;
-        document.getElementById('reminderTaskTitle').textContent = task.title;
-        document.getElementById('reminderTaskDesc').textContent = task.description || '无描述';
-        document.getElementById('reminderModal').classList.add('show');
-
-        try {
-            const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBTKJ0fPEcikGJ37C7+ONQQ4XZrjr77FXFg1No+LyvmwcBzaL0vPFcikGJ3/C7+OOTQ8WWLP');
-            audio.volume = 0.3;
-            audio.play().catch(() => {});
-        } catch (e) {}
-    });
-}
-
-function closeReminderDialog() {
-    // 提醒弹窗必须选择操作，不允许直接关闭
-}
-
-async function completeReminderTask() {
-    if (!state.reminderTask) return;
-    try {
-        const result = await Promise.race([
-            eel.toggle_task_status(state.reminderTask.id)(),
-            new Promise((_, reject) => setTimeout(() => reject(new Error('操作超时')), 5000))
-        ]);
-
-        if (!result || !result.success) {
-            alert(result?.message || '操作失败，请稍后重试');
-            return;
-        }
-
-        await eel.dismiss_reminder()();
-        document.getElementById('reminderModal').classList.remove('show');
-        state.reminderTask = null;
-        await loadTasks();
-    } catch (error) {
-        console.error('完成任务失败:', error);
-        alert('完成任务失败: ' + error.message);
-    }
-}
-
-async function snoozeReminder(minutes) {
-    if (!state.reminderTask) return;
-    try {
-        const result = await Promise.race([
-            eel.snooze_reminder(state.reminderTask.id, minutes)(),
-            new Promise((_, reject) => setTimeout(() => reject(new Error('操作超时')), 5000))
-        ]);
-
-        if (!result || !result.success) {
-            alert(result?.message || '操作失败，请稍后重试');
-            return;
-        }
-
-        await eel.dismiss_reminder()();
-        document.getElementById('reminderModal').classList.remove('show');
-        state.reminderTask = null;
-        await loadTasks();
-    } catch (error) {
-        console.error('延迟提醒失败:', error);
-        alert('延迟提醒失败: ' + error.message);
-    }
-}
-
-async function snoozeCustom() {
-    const input = document.getElementById('customSnoozeMinutes');
-    const minutes = parseInt(input.value);
-    if (!minutes || minutes < 1 || minutes > 1440) {
-        alert('请输入 1-1440 之间的分钟数');
-        return;
-    }
-    await snoozeReminder(minutes);
-    input.value = '';
 }
 
 // ===== 右键菜单 =====

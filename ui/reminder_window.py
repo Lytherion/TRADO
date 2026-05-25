@@ -1,256 +1,217 @@
-"""
-强制提醒窗口模块 - 使用 Tkinter 创建置顶提醒
-"""
 import sys
 from threading import Thread
 
+DEFAULT_SNOOZE_MINUTES = 9
 
-def show_reminder_window(task_id, task_title, on_complete_callback, on_snooze_callback):
-    """
-    显示强制置顶的提醒窗口
 
-    Args:
-        task_id: 任务ID
-        task_title: 任务标题
-        on_complete_callback: 完成回调函数 callback(task_id)
-        on_snooze_callback: 延期回调函数 callback(task_id, minutes)
-    """
+def show_reminder_window(task_id, task_title, on_complete_callback, on_snooze_callback, on_shown_callback=None):
     if sys.platform != 'win32':
         return
 
     def show_dialog():
         try:
             import tkinter as tk
-            from tkinter import ttk
+            import ctypes
 
-            # 创建置顶窗口
+            try:
+                ctypes.windll.shcore.SetProcessDpiAwareness(1)
+            except Exception:
+                pass
+
             root = tk.Tk()
-            root.withdraw()  # 先隐藏,设置好后再显示,避免闪烁
+            root.withdraw()
             root.title("任务提醒")
             root.resizable(False, False)
-
-            # 移除窗口装饰(无边框)
             root.overrideredirect(True)
-
-            # 强制置顶设置
             root.attributes('-topmost', True)
             root.attributes('-toolwindow', True)
-
-            # 禁用键盘操作
             root.bind('<Key>', lambda _: 'break')
 
-            # 先更新窗口以获取正确的屏幕尺寸
             root.update_idletasks()
-            screen_width = root.winfo_screenwidth()
-            screen_height = root.winfo_screenheight()
+            sw, sh = root.winfo_screenwidth(), root.winfo_screenheight()
 
-            # 设置窗口大小和居中位置
-            window_width = 480
-            window_height = 260
-            x = (screen_width - window_width) // 2
-            y = (screen_height - window_height) // 2
-            root.geometry(f"{window_width}x{window_height}+{x}+{y}")
+            W, H, R = 440, 250, 14
+            HEADER_H = 50
+            x, y = (sw - W) // 2, (sh - H) // 2
+            root.geometry(f"{W}x{H}+{x}+{y}")
+            root.configure(bg='white')
 
-            # 主框架 - 添加边框
-            main_frame = tk.Frame(root, bg='#2c3e50', bd=2, relief=tk.RAISED)
-            main_frame.pack(fill=tk.BOTH, expand=True)
+            # SetWindowRgn 裁出圆角——Header Frame 的角自然跟着裁
+            def apply_round():
+                try:
+                    hwnd = ctypes.windll.user32.GetParent(root.winfo_id()) or root.winfo_id()
+                    try:
+                        v = ctypes.c_int(2)
+                        ctypes.windll.dwmapi.DwmSetWindowAttribute(
+                            hwnd, 33, ctypes.byref(v), ctypes.sizeof(v))
+                    except Exception:
+                        pass
+                    rgn = ctypes.windll.gdi32.CreateRoundRectRgn(
+                        0, 0, W + 1, H + 1, R * 2, R * 2)
+                    ctypes.windll.user32.SetWindowRgn(hwnd, rgn, True)
+                except Exception:
+                    pass
 
-            # 内容框架
-            content_frame = tk.Frame(main_frame, bg='#ecf0f1', padx=20, pady=15)
-            content_frame.pack(fill=tk.BOTH, expand=True)
+            HEADER   = '#667eea'
+            BG       = 'white'
+            TEXT     = '#111827'
+            SUBTEXT  = '#6b7280'
+            BORDER   = '#e5e7eb'
+            TAG_BG   = '#f3f4f6'
+            TAG_FG   = '#667eea'
+            TAG_HV   = '#e0e7ff'
+            BTN_OK   = '#16a34a'
+            BTN_OK_H = '#15803d'
+            BTN_SN   = '#667eea'
+            BTN_SN_H = '#5568d3'
 
-            # 标题栏
-            title_bar = tk.Frame(content_frame, bg='#34495e', height=40)
-            title_bar.pack(fill=tk.X, pady=(0, 15))
-            title_bar.pack_propagate(False)
+            F_TITLE = ('Microsoft YaHei UI', 11, 'bold')
+            F_TASK  = ('Microsoft YaHei UI', 12, 'bold')
+            F_LABEL = ('Microsoft YaHei UI', 9)
+            F_BTN   = ('Microsoft YaHei UI', 10, 'bold')
+            F_TAG   = ('Microsoft YaHei UI', 9)
+            F_ENTRY = ('Microsoft YaHei UI', 11)
 
-            title_label = tk.Label(
-                title_bar,
-                text="⏰ 任务提醒",
-                font=('Microsoft YaHei', 13, 'bold'),
-                bg='#34495e',
-                fg='white',
-                anchor=tk.W,
-                padx=15
+            # Header：纯 Frame，圆角由 SetWindowRgn 裁出，不需要 Canvas 画弧
+            header = tk.Frame(root, bg=HEADER, height=HEADER_H)
+            header.pack(fill=tk.X)
+            header.pack_propagate(False)
+            tk.Label(header, text='任务提醒', font=F_TITLE,
+                     bg=HEADER, fg='white').pack(side=tk.LEFT, padx=18)
+
+            # 内容区
+            body = tk.Frame(root, bg=BG, padx=18)
+            body.pack(fill=tk.BOTH, expand=True)
+
+            display_title = task_title if len(task_title) <= 32 else task_title[:31] + '…'
+            tk.Label(body, text=display_title, font=F_TASK,
+                     bg=BG, fg=TEXT, anchor=tk.W,
+                     wraplength=W - 40, justify=tk.LEFT).pack(fill=tk.X, pady=(12, 8))
+
+            tk.Frame(body, bg=BORDER, height=1).pack(fill=tk.X, pady=(0, 10))
+
+            # 延后行
+            row = tk.Frame(body, bg=BG)
+            row.pack(fill=tk.X)
+
+            tk.Label(row, text='延后', font=F_LABEL,
+                     bg=BG, fg=SUBTEXT).pack(side=tk.LEFT, padx=(0, 8))
+
+            entry = tk.Entry(
+                row, font=F_ENTRY, width=4, justify=tk.CENTER,
+                bg='#f9fafb', fg=TEXT,
+                insertbackground=HEADER,
+                relief=tk.FLAT,
+                highlightthickness=1,
+                highlightbackground=BORDER,
+                highlightcolor=HEADER,
             )
-            title_label.pack(fill=tk.BOTH, expand=True)
+            entry.pack(side=tk.LEFT, ipady=5, padx=(0, 6))
 
-            # 任务内容区域
-            task_label = tk.Label(
-                content_frame,
-                text=task_title,
-                font=('Microsoft YaHei', 11),
-                bg='#ecf0f1',
-                fg='#2c3e50',
-                wraplength=420,
-                justify=tk.LEFT,
-                anchor=tk.W
-            )
-            task_label.pack(fill=tk.X, pady=(0, 15))
+            unit_var = tk.StringVar(value='分钟')
+            uf = tk.Frame(row, bg=BG)
+            uf.pack(side=tk.LEFT, padx=(0, 10))
+            unit_btns = {}
 
-            # 延期时间选择区域
-            snooze_frame = tk.Frame(content_frame, bg='#ecf0f1')
-            snooze_frame.pack(fill=tk.X, pady=(0, 15))
+            def select_unit(u):
+                unit_var.set(u)
+                for uu, b in unit_btns.items():
+                    b.config(bg=HEADER if uu == u else TAG_BG,
+                             fg='white' if uu == u else SUBTEXT)
 
-            snooze_label = tk.Label(
-                snooze_frame,
-                text="延期时间:",
-                font=('Microsoft YaHei', 10),
-                bg='#ecf0f1',
-                fg='#34495e'
-            )
-            snooze_label.pack(side=tk.LEFT, padx=(0, 8))
+            for u in ['分钟', '小时']:
+                sel = u == '分钟'
+                b = tk.Label(uf, text=u, font=F_TAG,
+                             bg=HEADER if sel else TAG_BG,
+                             fg='white' if sel else SUBTEXT,
+                             cursor='hand2', padx=8, pady=4, relief=tk.FLAT)
+                b.pack(side=tk.LEFT, padx=1)
+                b.bind('<Button-1>', lambda _, uu=u: select_unit(uu))
+                unit_btns[u] = b
 
-            # 延期时间输入框
-            snooze_var = tk.StringVar(root)
-            snooze_entry = tk.Entry(
-                snooze_frame,
-                textvariable=snooze_var,
-                font=('Microsoft YaHei', 10),
-                width=8,
-                justify=tk.CENTER,
-                bg='white',
-                fg='#2c3e50',
-                relief=tk.SOLID,
-                bd=1
-            )
-            snooze_entry.pack(side=tk.LEFT, padx=(0, 5))
-            snooze_var.set("9")  # 延后设置默认值
+            def set_quick(v, u):
+                entry.delete(0, tk.END)
+                entry.insert(0, str(v))
+                select_unit(u)
 
-            # 时间单位下拉框
-            unit_var = tk.StringVar(root)
-            unit_combo = ttk.Combobox(
-                snooze_frame,
-                textvariable=unit_var,
-                values=["分钟", "小时"],
-                font=('Microsoft YaHei', 10),
-                width=6,
-                state='readonly'
-            )
-            unit_combo.pack(side=tk.LEFT, padx=(0, 10))
-            unit_var.set("分钟")  # 延后设置默认值
+            for lbl, v, u in [('5m', 5, '分钟'), ('15m', 15, '分钟'),
+                               ('30m', 30, '分钟'), ('1h', 1, '小时')]:
+                t = tk.Label(row, text=lbl, font=F_TAG,
+                             bg=TAG_BG, fg=TAG_FG,
+                             cursor='hand2', padx=7, pady=4, relief=tk.FLAT)
+                t.pack(side=tk.LEFT, padx=2)
+                t.bind('<Button-1>', lambda _, vv=v, uu=u: set_quick(vv, uu))
+                t.bind('<Enter>', lambda _, b=t: b.config(bg=TAG_HV))
+                t.bind('<Leave>', lambda _, b=t: b.config(bg=TAG_BG))
 
-            # 快捷选项
-            quick_frame = tk.Frame(snooze_frame, bg='#ecf0f1')
-            quick_frame.pack(side=tk.LEFT)
+            btn_area = tk.Frame(body, bg=BG)
+            btn_area.pack(fill=tk.X, pady=(14, 14))
 
-            quick_options = [
-                ("5分钟", 5, "分钟"),
-                ("10分钟", 10, "分钟"),
-                ("30分钟", 30, "分钟"),
-                ("1小时", 1, "小时")
-            ]
-
-            def set_quick_time(value, unit):
-                snooze_var.set(str(value))
-                unit_var.set(unit)
-
-            for label, value, unit in quick_options:
-                btn = tk.Label(
-                    quick_frame,
-                    text=label,
-                    font=('Microsoft YaHei', 9),
-                    bg='#bdc3c7',
-                    fg='#2c3e50',
-                    cursor='hand2',
-                    padx=6,
-                    pady=2,
-                    relief=tk.RAISED,
-                    bd=1
-                )
-                btn.pack(side=tk.LEFT, padx=2)
-                btn.bind('<Button-1>', lambda e, v=value, u=unit: set_quick_time(v, u))
-                btn.bind('<Enter>', lambda e, b=btn: b.config(bg='#95a5a6'))
-                btn.bind('<Leave>', lambda e, b=btn: b.config(bg='#bdc3c7'))
-
-            # 按钮区域
-            button_frame = tk.Frame(content_frame, bg='#ecf0f1')
-            button_frame.pack(fill=tk.X)
-
-            # 操作结果处理
             def mark_complete():
                 try:
                     root.destroy()
                     on_complete_callback(task_id)
-                except:
+                except Exception:
                     pass
 
             def snooze_reminder():
                 try:
-                    value = int(snooze_var.get())
-                    unit = unit_var.get()
-                    minutes = value if unit == "分钟" else value * 60
+                    raw = entry.get().strip()
+                    minutes = int(raw) if raw else DEFAULT_SNOOZE_MINUTES
+                    if unit_var.get() == '小时':
+                        minutes *= 60
                     if minutes <= 0:
-                        return
+                        minutes = DEFAULT_SNOOZE_MINUTES
                     root.destroy()
                     on_snooze_callback(task_id, minutes)
                 except ValueError:
-                    pass
+                    root.destroy()
+                    on_snooze_callback(task_id, DEFAULT_SNOOZE_MINUTES)
                 except Exception as e:
                     print(f"延期失败: {e}")
                     try:
                         root.destroy()
-                    except:
+                    except Exception:
                         pass
 
-            # 完成按钮
-            complete_btn = tk.Button(
-                button_frame,
-                text="✓ 已完成",
-                font=('Microsoft YaHei', 11, 'bold'),
-                bg='#27ae60',
-                fg='white',
-                activebackground='#229954',
-                activeforeground='white',
-                cursor='hand2',
-                relief=tk.FLAT,
-                padx=30,
-                pady=12,
-                command=mark_complete
-            )
-            complete_btn.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=(0, 8))
+            def make_btn(parent, text, cmd, bg, hv):
+                b = tk.Button(
+                    parent, text=text, command=cmd,
+                    font=F_BTN, bg=bg, fg='white',
+                    activebackground=hv, activeforeground='white',
+                    cursor='hand2', relief=tk.FLAT,
+                    bd=0, highlightthickness=0,
+                )
+                b.bind('<Enter>', lambda _: b.config(bg=hv))
+                b.bind('<Leave>', lambda _: b.config(bg=bg))
+                return b
 
-            # 延期按钮
-            snooze_btn = tk.Button(
-                button_frame,
-                text="⏰ 延期",
-                font=('Microsoft YaHei', 11, 'bold'),
-                bg='#3498db',
-                fg='white',
-                activebackground='#2980b9',
-                activeforeground='white',
-                cursor='hand2',
-                relief=tk.FLAT,
-                padx=30,
-                pady=12,
-                command=snooze_reminder
-            )
-            snooze_btn.pack(side=tk.LEFT, expand=True, fill=tk.X)
+            ok_btn = make_btn(btn_area, '✓  已完成', mark_complete, BTN_OK, BTN_OK_H)
+            ok_btn.pack(side=tk.LEFT, fill=tk.X, expand=True, ipady=10, padx=(0, 8))
 
-            # 鼠标悬停效果
-            def on_enter(e, btn, color):
-                btn['bg'] = color
+            sn_btn = make_btn(btn_area, '⏱  延后', snooze_reminder, BTN_SN, BTN_SN_H)
+            sn_btn.pack(side=tk.LEFT, fill=tk.X, expand=True, ipady=10)
 
-            def on_leave(e, btn, color):
-                btn['bg'] = color
+            root.bind('<Return>', lambda _: snooze_reminder())
 
-            complete_btn.bind('<Enter>', lambda e: on_enter(e, complete_btn, '#229954'))
-            complete_btn.bind('<Leave>', lambda e: on_leave(e, complete_btn, '#27ae60'))
-            snooze_btn.bind('<Enter>', lambda e: on_enter(e, snooze_btn, '#2980b9'))
-            snooze_btn.bind('<Leave>', lambda e: on_leave(e, snooze_btn, '#3498db'))
-
-            # 允许通过回车键确认延期
-            root.bind('<Return>', lambda e: snooze_reminder())
-
-            # 保持窗口始终在最前(不强制抢夺焦点)
             root.lift()
             root.attributes('-topmost', True)
-
-            # 显示窗口
             root.deiconify()
-            root.focus_force()
+            root.update_idletasks()
+            apply_round()
 
-            # 运行窗口
+            # 填入默认值并聚焦，在事件循环稳定后执行
+            def init_entry():
+                entry.delete(0, tk.END)
+                entry.insert(0, str(DEFAULT_SNOOZE_MINUTES))
+                entry.focus_set()
+                entry.icursor(tk.END)
+
+            root.after(0, init_entry)
+
+            if on_shown_callback:
+                on_shown_callback()
+
             root.mainloop()
 
         except Exception as e:
@@ -258,5 +219,4 @@ def show_reminder_window(task_id, task_title, on_complete_callback, on_snooze_ca
             import traceback
             traceback.print_exc()
 
-    # 在独立线程中运行
     Thread(target=show_dialog, daemon=True).start()

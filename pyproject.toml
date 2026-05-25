@@ -12,7 +12,7 @@ license = {text = "MIT"}
 
 dependencies = [
     "eel>=0.16.0",
-    "keyboard>=0.13.5",
+    "pynput>=1.8.2",
     "requests>=2.34.2",
 ]
 
@@ -29,6 +29,11 @@ build-backend = "setuptools.build_meta"
 where = ["."]
 include = ["api*", "database*", "models*", "services*", "ui*"]
 exclude = [".venv*", "build*", "dist*"]
+
+[dependency-groups]
+dev = [
+    "pyinstaller>=6.20.0",
+]
 
 [project.scripts]
 task-manager = "main_eel:main"

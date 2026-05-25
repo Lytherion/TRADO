@@ -1,9 +1,8 @@
-import sys
+import os
 from pathlib import Path
 
-if getattr(sys, 'frozen', False):
-    BASE_DIR = Path(sys.executable).parent
-else:
-    BASE_DIR = Path(__file__).parent
+APP_DATA_DIR = Path(os.environ.get("APPDATA", Path.home() / "AppData" / "Roaming"))
+BASE_DIR = APP_DATA_DIR / "TaskManager"
+BASE_DIR.mkdir(parents=True, exist_ok=True)
 
 DB_PATH = BASE_DIR / "tasks.db"

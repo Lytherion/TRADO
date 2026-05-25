@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>任务管理器</title>
-    <link rel="icon" type="image/png" href="icon.png">
+    <link rel="icon" href="favicon.ico">
     <link rel="stylesheet" href="style.css">
     <script type="text/javascript" src="/eel.js"></script>
 </head>
@@ -79,8 +79,8 @@
                             <input type="datetime-local" id="taskStartTime">
                         </div>
                         <div class="form-group">
-                            <label for="taskDueTime">截止时间 *</label>
-                            <input type="datetime-local" id="taskDueTime" required>
+                            <label for="taskRemindTime">提醒时间 *</label>
+                            <input type="datetime-local" id="taskRemindTime" required>
                         </div>
                     </div>
                     <div class="form-group" id="taskStatusGroup" style="display: none;">
@@ -187,37 +187,6 @@
                         <button type="submit" class="btn btn-primary">保存</button>
                     </div>
                 </form>
-            </div>
-        </div>
-    </div>
-
-    <!-- 提醒弹窗 -->
-    <div class="modal modal-reminder" id="reminderModal">
-        <div class="modal-content modal-small">
-            <div class="modal-header">
-                <h2>⏰ 任务提醒</h2>
-            </div>
-            <div class="modal-body">
-                <h3 id="reminderTaskTitle"></h3>
-                <p id="reminderTaskDesc"></p>
-                <div class="reminder-actions">
-                    <button class="btn btn-success" onclick="completeReminderTask()">
-                        ✓ 完成任务
-                    </button>
-                    <button class="btn btn-warning" onclick="snoozeReminder(10)">
-                        延迟 10 分钟
-                    </button>
-                    <button class="btn btn-warning" onclick="snoozeReminder(30)">
-                        延迟 30 分钟
-                    </button>
-                    <button class="btn btn-warning" onclick="snoozeReminder(60)">
-                        延迟 1 小时
-                    </button>
-                    <div class="snooze-custom">
-                        <input type="number" id="customSnoozeMinutes" placeholder="自定义分钟数" min="1" max="1440">
-                        <button onclick="snoozeCustom()">延迟</button>
-                    </div>
-                </div>
             </div>
         </div>
     </div>

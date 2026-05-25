@@ -13,10 +13,10 @@ from services.is_trade_day import is_trade_day
 
 # 全局应用实例引用
 _app = None
+_hotkey_pending = False
 
 
 def set_app_instance(app):
-    """设置应用实例引用"""
     global _app
     _app = app
 
@@ -43,7 +43,7 @@ def get_today_tasks():
         return []
     tasks = _app.task_service.get_uncompleted_tasks()
     today = datetime.now().date()
-    today_tasks = [t for t in tasks if t.due_time and t.due_time.date() == today]
+    today_tasks = [t for t in tasks if t.remind_time and t.remind_time.date() == today]
     return [task_to_dict(t) for t in today_tasks]
 
 
@@ -69,7 +69,6 @@ def create_task(task_data):
     task = Task(
         title=task_data['title'],
         description=task_data.get('description', ''),
-        due_time=datetime.fromisoformat(task_data['due_time']) if task_data.get('due_time') else None,
         remind_time=datetime.fromisoformat(task_data['remind_time']) if task_data.get('remind_time') else None,
         tags=task_data.get('tags', []),
         status=TaskStatus.TODO
@@ -93,7 +92,6 @@ def update_task(task_id, task_data):
         id=task_id,
         title=task_data['title'],
         description=task_data.get('description', ''),
-        due_time=datetime.fromisoformat(task_data['due_time']) if task_data.get('due_time') else None,
         remind_time=datetime.fromisoformat(task_data['remind_time']) if task_data.get('remind_time') else None,
         tags=task_data.get('tags', []),
         status=TaskStatus(task_data.get('status', 0))
@@ -250,17 +248,27 @@ def delete_permanent_task(task_id):
     return {'success': True, 'message': '常驻任务删除成功'}
 
 
+# ========== 热键 API ==========
+def set_hotkey_pending():
+    global _hotkey_pending
+    _hotkey_pending = True
+
+
+@eel.expose
+def consume_hotkey_action():
+    global _hotkey_pending
+    if _hotkey_pending:
+        _hotkey_pending = False
+        return True
+    return False
+
+
 # ========== 提醒功能 API (2 个) ==========
 @eel.expose
 def snooze_reminder(task_id, minutes):
     if not _check_ready():
         return {'success': False, 'message': '服务未就绪'}
     _app.reminder_service.snooze_reminder(task_id, minutes)
-    return {'success': True}
-
-
-@eel.expose
-def dismiss_reminder():
     return {'success': True}
 
 

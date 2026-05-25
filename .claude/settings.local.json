@@ -3,7 +3,10 @@
     "allow": [
       "Bash(python main_webview.py:*)",
       "Bash(python test_performance.py:*)",
-      "Bash(dir:*)"
+      "Bash(dir:*)",
+      "PowerShell(Get-ChildItem \"C:\\\\Users\\\\user\\\\Desktop\\\\proj\\\\_小工具\\\\task_manager_qt\\\\assets\" -Recurse | Where-Object { -not $_.PSIsContainer } | Select-Object FullName)",
+      "PowerShell(Copy-Item \"C:\\\\Users\\\\user\\\\Desktop\\\\proj\\\\_小工具\\\\task_manager_qt\\\\assets\\\\app.ico\" \"C:\\\\Users\\\\user\\\\Desktop\\\\proj\\\\_小工具\\\\task_manager_qt\\\\ui\\\\web\\\\favicon.ico\")",
+      "PowerShell(uv run python -c \"import eel, os; print\\(os.path.dirname\\(eel.__file__\\)\\)\" 2>&1)"
     ]
   }
 }

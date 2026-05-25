@@ -8,8 +8,7 @@ CREATE TABLE IF NOT EXISTS tasks (
 
     -- 时间
     start_time TEXT,
-    due_time TEXT,
-    remind_time TEXT,
+    remind_time TEXT,       -- 下次弹窗时间，延后后直接更新此字段
 
     -- 属性
     status INTEGER DEFAULT 0,
@@ -20,7 +19,6 @@ CREATE TABLE IF NOT EXISTS tasks (
 
     -- 提醒
     notified INTEGER DEFAULT 0,
-    snooze_until TEXT,
 
     -- 元数据
     created_at TEXT NOT NULL,
@@ -81,6 +79,6 @@ CREATE TABLE IF NOT EXISTS settings (
 
 -- 创建索引
 CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);
-CREATE INDEX IF NOT EXISTS idx_tasks_due_time ON tasks(due_time);
+CREATE INDEX IF NOT EXISTS idx_tasks_remind_time ON tasks(remind_time);
 CREATE INDEX IF NOT EXISTS idx_tasks_recurring_id ON tasks(recurring_id);
 CREATE INDEX IF NOT EXISTS idx_recurring_active ON recurring_tasks(is_active);
