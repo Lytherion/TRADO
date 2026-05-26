@@ -1,22 +1,20 @@
+import random
 import requests
 from datetime import datetime, date, timedelta
 
-_trade_dates: set = set()
-_fetched = False
+# {month_str: {date_str: bool}}  e.g. {"2026-05": {"2026-05-01": False, ...}}
+_cache: dict = {}
 
 
-def _fetch_trade_dates() -> bool:
-    """从腾讯金融 API 拉取最近 100 个交易日，缓存到 _trade_dates。"""
-    global _fetched
-    if _fetched:
+def _fetch_month(month: str) -> bool:
+    """拉取指定月份交易日历（month 格式 YYYY-MM），缓存到 _cache。"""
+    if month in _cache:
         return True
     try:
-        url = "https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=sh000001,day,,,100,"
+        url = f"https://www.szse.cn/api/report/exchange/onepersistenthour/monthList?month={month}&random={random.random()}"
         resp = requests.get(url, timeout=10)
-        data = resp.json()
-        kline = data["data"]["sh000001"]["day"]
-        _trade_dates.update(item[0] for item in kline)
-        _fetched = True
+        data = resp.json().get("data", [])
+        _cache[month] = {item["jyrq"]: item["jybz"] == "1" for item in data}
         return True
     except Exception:
         return False
@@ -26,14 +24,10 @@ def is_trade_day(check_date: str = None) -> bool:
     """判断指定日期是否为交易日（YYYY-MM-DD），网络失败时返回 False。"""
     if check_date is None:
         check_date = datetime.today().strftime("%Y-%m-%d")
-
-    if check_date in _trade_dates:
-        return True
-
-    if not _fetch_trade_dates():
+    month = check_date[:7]
+    if not _fetch_month(month):
         return False
-
-    return check_date in _trade_dates
+    return _cache[month].get(check_date, False)
 
 
 def is_today_trade_day() -> bool:
@@ -42,13 +36,12 @@ def is_today_trade_day() -> bool:
 
 def next_trade_day(from_date: date) -> date:
     """返回 from_date 之后（不含当天）的第一个交易日，网络失败时最多找 30 天。"""
-    _fetch_trade_dates()
     d = from_date + timedelta(days=1)
     for _ in range(30):
         if is_trade_day(d.strftime("%Y-%m-%d")):
             return d
         d += timedelta(days=1)
-    return d  # 兜底
+    return d
 
 
 if __name__ == "__main__":
