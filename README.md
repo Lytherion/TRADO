@@ -31,8 +31,6 @@ uv sync
 uv run main_eel.py
 ```
 
-Windows 下也可以用 `run_task_manager_hidden.bat` 静默启动（不显示控制台窗口）。
-
 ## 项目结构
 
 ```
@@ -53,10 +51,6 @@ TRADO/
     ├── web/                 # 前端（HTML / CSS / JS）
     └── reminder_window.py   # Tkinter 强制置顶弹窗
 ```
-
-## 截图
-
-（待补充）
 
 ## License
 
