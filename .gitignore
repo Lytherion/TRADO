@@ -37,3 +37,7 @@ build/
 
 # uv
 .python-version
+
+# Claude Code
+.claude/
+CLAUDE.md
