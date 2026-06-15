@@ -8,12 +8,14 @@ _cache: dict = {}
 
 def _fetch_month(month: str) -> bool:
     """拉取指定月份交易日历（month 格式 YYYY-MM），缓存到 _cache。"""
-    if month in _cache:
+    if _cache.get(month):
         return True
     try:
         url = f"https://www.szse.cn/api/report/exchange/onepersistenthour/monthList?month={month}&random={random.random()}"
         resp = requests.get(url, timeout=10)
         data = resp.json().get("data", [])
+        if not data:
+            return False
         _cache[month] = {item["jyrq"]: item["jybz"] == "1" for item in data}
         return True
     except Exception:
